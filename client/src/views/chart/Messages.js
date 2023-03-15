@@ -11,7 +11,7 @@ import Whether, {Else, If} from "../../components/Whether";
 
 
 const Messages = (props) => {
-    const { retMsgs, outMsgs,errorMsgs, onItemDeleted, onEdit,onReply } =  props?.props || props || {};
+    const { retMsgs, outMsgs, onItemDeleted, onEdit,onReply } =  props?.props || props || {};
 
     const rewriteItem = (text) => {
         return (e) => {
@@ -54,7 +54,6 @@ const Messages = (props) => {
         [
             ...retMsgs,
             ...outMsgs,
-            ...errorMsgs
         ]
         .filter(item => !!item?.msg)
         .sort((itemA, itemB) => (itemA?.timestamp - itemB.timestamp))
@@ -75,13 +74,6 @@ const Messages = (props) => {
                             <span>
                                 <ReactMarkdown>{ret.msg}</ReactMarkdown>
                             </span>
-                            <Whether value={ret.type === 'error'}>
-                                <div className='talking-item-btns'>
-                                    <RedoOutline onClick={()=>{
-                                        onReply && onReply()
-                                    }}/>
-                                </div>
-                            </Whether>
                         </div>
                     </div>
                 </List.Item>))

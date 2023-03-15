@@ -20,7 +20,6 @@ function ChatComponent(props) {
 
     const [outMsgs,setOutMsgs] = useState([])
     const [retMsgs,setRetMsgs] = useState([])
-    const [errorMsgs,setErrorMsgs] = useState([])
 
     const [msgId, setMsgId] = useState('');
     const [convId, setConvId] = useState('');
@@ -57,54 +56,12 @@ function ChatComponent(props) {
     const onclose = () => {
     }
     const onerror = (message) => {
-        setErrorMsgs([...errorMsgs,{
-            id: genRandomMsgId(),
-            msg:'ChatGPT 用量饱和，请稍后重试',
-            timestamp: new Date().valueOf()
-        }])
-    }
-    const onReply = async function(e){
-        abortSignalRef.current = null
-        setTyping(true);
-        try {
-            const callRes = await callBridge({
-                data: {
-                    message: question,
-                    parentMessageId: msgId,
-                    conversationId: convId,
-                },
-                onmessage,
-                onopen,
-                onclose,
-                onerror,
-                getSignal: (sig) => {
-                    abortSignalRef.current = sig
-                },
-                debug: props.debug
-            })
-            setQuestion('');
-            const { response, messageId, conversationId } = callRes || {}
-
-            if (messageId) {
-                setMsgId(messageId);
-            }
-
-
-            // TODO: Persist request feedback to mysql
-            setTyping(false);
-            setCache({
-                [convId]:{
-                    "chat-out-msgs": outMsgs,
-                    "chat-ret-msgs": [...retMsgs, { id: messageId, msg: response, timestamp: new Date().valueOf() }]
-                }
-            })
-
-            return callRes;
-        } catch (error) {
-            console.error('call service error: ', error);
-
-            setTyping(false);
-        }
+        Toast.show({
+            icon: 'fail',
+            content: '提问失败',
+            maskClickable: false,
+            duration: 2000,
+        })
     }
     const directChat = async function (e) {
         e.preventDefault();
@@ -203,8 +160,6 @@ function ChatComponent(props) {
                     <Messages
                         retMsgs={retMsgs.map(item => { item && (item.type = 'incoming'); return item })}
                         outMsgs={outMsgs.map(item => { item && (item.type = 'outgoing'); return item })}
-                        errorMsgs={errorMsgs.map(item => { item && (item.type = 'error'); return item })}
-                        onReply={onReply}
                     />
                     <div className='chat-bottom-line' ref={messagesEndRef}></div>
                 </div>
