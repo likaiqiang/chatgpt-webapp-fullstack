@@ -1,6 +1,6 @@
 import React, {useEffect, useState, useRef, useContext} from 'react';
 import {Toast, Button, Modal, SafeArea, NoticeBar} from 'antd-mobile'
-import {PlayOutline, HeartOutline, LeftOutline, AntOutline} from 'antd-mobile-icons'
+import {PlayOutline, HeartOutline, LeftOutline, AntOutline, DownlandOutline} from 'antd-mobile-icons'
 import {useLocation, useNavigate} from 'react-router-dom'
 import Whether, {If, Else} from "../../components/Whether";
 import {callBridge} from '../../ChatServiceBridge';
@@ -152,6 +152,28 @@ function ChatComponent(props) {
             directChat(e)
         }
     })
+    const exportData = useMemoizedFn(()=>{
+        const data = [
+            ...retMsgs,
+            ...outMsgs,
+        ]
+            .sort((itemA, itemB) => (itemA?.timestamp - itemB.timestamp))
+        const blob = new Blob([JSON.stringify(data,null,2)], {type: "application/json"});
+
+        // Create a download link for the JSON file
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `${cache[convId]['chat-out-msgs'][0].msg}.json`;
+        document.body.appendChild(link);
+
+        // Click the link to trigger the download
+        link.click();
+
+        // Clean up the created URL and link element
+        URL.revokeObjectURL(url);
+        document.body.removeChild(link);
+    })
 
     return (<div className="container">
         <div className="chatbox">
@@ -162,6 +184,9 @@ function ChatComponent(props) {
                     }}/>
                 </div>
                 <div className="name">WebInfra</div>
+                <div style={{fontSize:'2em'}}>
+                    <DownlandOutline onClick={exportData}/>
+                </div>
             </div>
             <div className="middle" style={{marginTop: '60px'}}>
                 <div className="chat-container">
