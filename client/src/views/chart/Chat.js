@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef,useContext } from 'react';
-import { Toast, Button, Modal, TextArea, SafeArea, NoticeBar } from 'antd-mobile'
+import { Toast, Button, Modal, SafeArea, NoticeBar } from 'antd-mobile'
 import {PlayOutline, HeartOutline, LeftOutline} from 'antd-mobile-icons'
 import Whether,{If,Else} from "../../components/Whether";
 import { callBridge } from '../../ChatServiceBridge';
@@ -8,6 +8,8 @@ import './Chat.css';
 import Context from "../../context";
 import {useLocation, useNavigate} from "react-router-dom";
 import QS from "qs";
+import {useMemoizedFn} from "ahooks";
+import TextArea from './TextArea'
 
 function ChatComponent(props) {
     const [question, setQuestion] = useState("");
@@ -76,6 +78,7 @@ function ChatComponent(props) {
 
         const newOutMsgs = [...outMsgs, { id: genRandomMsgId(), msg: question, timestamp: new Date().valueOf() }]
         setCache({
+            ...cache,
             [convId]: {
                 "chat-out-msgs": newOutMsgs,
                 "chat-ret-msgs": retMsgs
@@ -112,6 +115,7 @@ function ChatComponent(props) {
             // TODO: Persist request feedback to mysql
             setTyping(false);
             setCache({
+                ...cache,
                 [convId]:{
                     "chat-out-msgs": newOutMsgs,
                     "chat-ret-msgs": [...retMsgs, { id: messageId, msg: response, timestamp: new Date().valueOf() }]
@@ -143,6 +147,12 @@ function ChatComponent(props) {
         // TODO: Send cancel feedback to server
         setTyping(false);
     }
+    const onKeyDown = useMemoizedFn((e)=>{
+        if (e.ctrlKey && e.keyCode === 13) {
+            // 这里是按下了ctrl + enter后要执行的代码
+            directChat(e)
+        }
+    })
 
     return (<div className="container">
         <div className="chatbox">
@@ -167,15 +177,16 @@ function ChatComponent(props) {
 
                 <div className="chat">
                     {/* <Input type="text" value={question} onChange={inputQuestion} onEnterPress={directChat} placeholder="开始提问吧..." enterkeyhint="done" maxLength={300} autoFocus clearable /> */}
-                    <TextArea placeholder='开始提问吧...'
-                        value={question}
-                        onChange={inputQuestion}
-                        rows={1}
-                        maxLength={300}
-                        autoSize={{ minRows: 1, maxRows: 8 }}
-                        showCount
-                        autoFocus
-                    />
+                    <TextArea antdProps={{
+                        placeholder:'开始提问吧...',
+                        value: question,
+                        onChange:inputQuestion,
+                        rows:1,
+                        maxLength:300,
+                        autoSize:{ minRows: 1, maxRows: 8 },
+                        showCount: true,
+                        autoFocus: true
+                    }} onKeyDown={onKeyDown}/>
                     <Whether value={typing}>
                         <div className="cancel-container">
                             <div className='cancel' onClick={onCancelChat}>

@@ -1,25 +1,27 @@
-import React, { useEffect, useState, useRef,useContext } from 'react';
-import { Toast, Button, Modal, TextArea, SafeArea, NoticeBar } from 'antd-mobile'
+import React, {useEffect, useState, useRef, useContext} from 'react';
+import {Toast, Button, Modal, SafeArea, NoticeBar} from 'antd-mobile'
 import {PlayOutline, HeartOutline, LeftOutline, AntOutline} from 'antd-mobile-icons'
 import {useLocation, useNavigate} from 'react-router-dom'
-import Whether,{If,Else} from "../../components/Whether";
-import { callBridge } from '../../ChatServiceBridge';
+import Whether, {If, Else} from "../../components/Whether";
+import {callBridge} from '../../ChatServiceBridge';
 import Messages from './Messages';
 import './Chat.css';
 import Context from "../../context";
+import TextArea from './TextArea'
+import {useMemoizedFn} from "ahooks";
 
 function ChatComponent(props) {
     const [question, setQuestion] = useState("");
 
-    const {cache,setCache} = useContext(Context)
+    const {cache, setCache} = useContext(Context)
 
     // const [outMsgs, setOutMsgs] = useLocalStorage('chat-out-msgs', []);
     // // 人的提问
     // const [retMsgs, setRetMsgs] = useLocalStorage('chat-ret-msgs', []);
     // //AI的回答
 
-    const [outMsgs,setOutMsgs] = useState([])
-    const [retMsgs,setRetMsgs] = useState([])
+    const [outMsgs, setOutMsgs] = useState([])
+    const [retMsgs, setRetMsgs] = useState([])
 
     const [msgId, setMsgId] = useState('');
     const [convId, setConvId] = useState('');
@@ -32,7 +34,7 @@ function ChatComponent(props) {
     const navigator = useNavigate()
 
     const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+        messagesEndRef.current?.scrollIntoView({behavior: "smooth"})
         console.log('scroll to bottom');
     }
 
@@ -73,7 +75,7 @@ function ChatComponent(props) {
         }
 
         setQuestion('');
-        const newOutMsgs = [...outMsgs, { id: genRandomMsgId(), msg: question, timestamp: new Date().valueOf() }]
+        const newOutMsgs = [...outMsgs, {id: genRandomMsgId(), msg: question, timestamp: new Date().valueOf()}]
         setOutMsgs(newOutMsgs)
 
         abortSignalRef.current = null
@@ -97,7 +99,7 @@ function ChatComponent(props) {
             })
             setQuestion('');
             console.log('client stream result: ', abortSignalRef.current, callRes);
-            const { response, messageId, conversationId } = callRes || {}
+            const {response, messageId, conversationId} = callRes || {}
 
             if (messageId) {
                 setMsgId(messageId);
@@ -108,12 +110,12 @@ function ChatComponent(props) {
 
             // TODO: Persist request feedback to mysql
             setTyping(false);
-            const newRetMsgs = [...retMsgs, { id: messageId, msg: response, timestamp: new Date().valueOf() }]
+            const newRetMsgs = [...retMsgs, {id: messageId, msg: response, timestamp: new Date().valueOf()}]
             setRetMsgs(newRetMsgs)
-            if(conversationId){
+            if (conversationId) {
                 setCache({
                     ...cache,
-                    [conversationId]:{
+                    [conversationId]: {
                         "chat-out-msgs": newOutMsgs,
                         "chat-ret-msgs": newRetMsgs
                     }
@@ -144,22 +146,34 @@ function ChatComponent(props) {
         // TODO: Send cancel feedback to server
         setTyping(false);
     }
+    const onKeyDown = useMemoizedFn((e) => {
+        if (e.ctrlKey && e.keyCode === 13) {
+            // 这里是按下了ctrl + enter后要执行的代码
+            directChat(e)
+        }
+    })
 
     return (<div className="container">
         <div className="chatbox">
             <div className="top-bar">
-                <div style={{fontSize:'2em'}}>
-                    <LeftOutline onClick={()=>{
+                <div style={{fontSize: '2em'}}>
+                    <LeftOutline onClick={() => {
                         navigator(-1)
                     }}/>
                 </div>
                 <div className="name">WebInfra</div>
             </div>
-            <div className="middle" style={{ marginTop: '60px' }}>
+            <div className="middle" style={{marginTop: '60px'}}>
                 <div className="chat-container">
                     <Messages
-                        retMsgs={retMsgs.map(item => { item && (item.type = 'incoming'); return item })}
-                        outMsgs={outMsgs.map(item => { item && (item.type = 'outgoing'); return item })}
+                        retMsgs={retMsgs.map(item => {
+                            item && (item.type = 'incoming');
+                            return item
+                        })}
+                        outMsgs={outMsgs.map(item => {
+                            item && (item.type = 'outgoing');
+                            return item
+                        })}
                     />
                     <div className='chat-bottom-line' ref={messagesEndRef}></div>
                 </div>
@@ -168,19 +182,26 @@ function ChatComponent(props) {
 
                 <div className="chat">
                     {/* <Input type="text" value={question} onChange={inputQuestion} onEnterPress={directChat} placeholder="开始提问吧..." enterkeyhint="done" maxLength={300} autoFocus clearable /> */}
-                    <TextArea placeholder='开始提问吧...'
-                              value={question}
-                              onChange={inputQuestion}
-                              rows={1}
-                              maxLength={300}
-                              autoSize={{ minRows: 1, maxRows: 8 }}
-                              showCount
-                              autoFocus
+                    <TextArea antdProps={{
+                        placeholder: '开始提问吧...',
+                        value: question,
+                        onChange: inputQuestion,
+                        rows: 1,
+                        maxLength: 300,
+                        autoSize: {minRows: 1, maxRows: 8},
+                        showCount: true,
+                        autoFocus: true
+                    }}
+                      onKeyDown={onKeyDown}
                     />
                     <Whether value={typing}>
                         <div className="cancel-container">
                             <div className='cancel' onClick={onCancelChat}>
-                                <svg stroke="currentColor" fill="none" strokeWidth="1.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>
+                                <svg stroke="currentColor" fill="none" strokeWidth="1.5" viewBox="0 0 24 24"
+                                     strokeLinecap="round" strokeLinejoin="round" height="1em" width="1em"
+                                     xmlns="http://www.w3.org/2000/svg">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                </svg>
                                 取消
                             </div>
                         </div>
@@ -197,15 +218,15 @@ function ChatComponent(props) {
                         </If>
                         <Else>
                             <div className="button-container">
-                                <Button className='button' onClick={(e) => directChat(e)}  >
-                                    <PlayOutline />
+                                <Button className='button' onClick={(e) => directChat(e)}>
+                                    <PlayOutline/>
                                 </Button>
                             </div>
                         </Else>
                     </Whether>
                 </div>
             </div>
-            <SafeArea position='bottom' />
+            <SafeArea position='bottom'/>
         </div>
     </div>)
 }
