@@ -17,8 +17,8 @@ function ChatComponent(props) {
     const {search} = useLocation()
     const {convId} = QS.parse(search.split('?').pop())
 
-    const outMsgs = cache[convId]['chat-out-msgs']
-    const retMsgs = cache[convId]['chat-ret-msgs']
+    const outMsgs = cache[convId]['chat-out-msgs'] || []
+    const retMsgs = cache[convId]['chat-ret-msgs'] || []
 
     // const [outMsgs, setOutMsgs] = useLocalStorage('chat-out-msgs', []);
     // // 人的提问
