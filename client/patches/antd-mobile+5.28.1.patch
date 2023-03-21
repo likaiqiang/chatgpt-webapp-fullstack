@@ -1,0 +1,24 @@
+diff --git a/node_modules/antd-mobile/cjs/components/text-area/text-area.js b/node_modules/antd-mobile/cjs/components/text-area/text-area.js
+index a6de8aa..3a994cb 100644
+--- a/node_modules/antd-mobile/cjs/components/text-area/text-area.js
++++ b/node_modules/antd-mobile/cjs/components/text-area/text-area.js
+@@ -55,6 +55,7 @@ const TextArea = (0, _react.forwardRef)((p, ref) => {
+     if (!autoSize) return;
+     const textArea = nativeTextAreaRef.current;
+     if (!textArea) return;
++    if(!value) heightRef.current = 'auto'
+     textArea.style.height = heightRef.current;
+     let height = textArea.scrollHeight;
+     if (typeof autoSize === 'object') {
+diff --git a/node_modules/antd-mobile/es/components/text-area/text-area.js b/node_modules/antd-mobile/es/components/text-area/text-area.js
+index 2af5b55..5f3d29e 100644
+--- a/node_modules/antd-mobile/es/components/text-area/text-area.js
++++ b/node_modules/antd-mobile/es/components/text-area/text-area.js
+@@ -47,6 +47,7 @@ export const TextArea = forwardRef((p, ref) => {
+     if (!autoSize) return;
+     const textArea = nativeTextAreaRef.current;
+     if (!textArea) return;
++    if(!value) heightRef.current = 'auto'
+     textArea.style.height = heightRef.current;
+     let height = textArea.scrollHeight;
+     if (typeof autoSize === 'object') {
