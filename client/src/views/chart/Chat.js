@@ -28,6 +28,8 @@ function ChatComponent(props) {
 
     const [typing, setTyping] = useState(false);
 
+    const [isError,setIsError] = useState(false)
+
     const abortSignalRef = useRef(null);
 
     const messagesEndRef = useRef(null)
@@ -66,15 +68,17 @@ function ChatComponent(props) {
             maskClickable: false,
             duration: 2000,
         })
+        setIsError(true)
     }
-    const directChat = async function (e) {
-        e.preventDefault();
+    const directChat = useMemoizedFn(async function (e) {
+        e && e.preventDefault();
         if (!question) {
             Toast.show({
                 content: '请输入有效问题',
             })
             return;
         }
+        setQuestion('');
 
         const newOutMsgs = [...outMsgs, { id: genRandomMsgId(), msg: question, timestamp: new Date().valueOf() }]
         setCache({
@@ -103,8 +107,7 @@ function ChatComponent(props) {
                 },
                 debug: props.debug
             })
-
-            setQuestion('');
+            setIsError(false)
             const { response, messageId, conversationId } = callRes || {}
 
             if (messageId) {
@@ -128,7 +131,7 @@ function ChatComponent(props) {
 
             setTyping(false);
         }
-    }
+    })
 
     useEffect(() => {
         scrollToBottom()
@@ -175,7 +178,12 @@ function ChatComponent(props) {
         URL.revokeObjectURL(url);
         document.body.removeChild(link);
     })
-
+    const onReply = ({msg},e)=>{
+        setQuestion(msg);
+        setTimeout(()=>{
+            directChat(e)
+        },0)
+    }
     return (<div className="container">
         <div className="chatbox">
             <div className="top-bar">
@@ -194,6 +202,8 @@ function ChatComponent(props) {
                     <Messages
                         retMsgs={retMsgs.map(item => { item && (item.type = 'incoming'); return item })}
                         outMsgs={outMsgs.map(item => { item && (item.type = 'outgoing'); return item })}
+                        onReply={onReply}
+                        isError={isError}
                     />
                     <div className='chat-bottom-line' ref={messagesEndRef}></div>
                 </div>

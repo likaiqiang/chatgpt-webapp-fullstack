@@ -26,6 +26,7 @@ function ChatComponent(props) {
     const [msgId, setMsgId] = useState('');
     const [convId, setConvId] = useState('');
     const [typing, setTyping] = useState(false);
+    const [isError,setIsError] = useState(false)
 
     const abortSignalRef = useRef(null);
 
@@ -64,8 +65,9 @@ function ChatComponent(props) {
             maskClickable: false,
             duration: 2000,
         })
+        setIsError(true)
     }
-    const directChat = async function (e) {
+    const directChat = useMemoizedFn(async function (e) {
         e.preventDefault();
         if (!question) {
             Toast.show({
@@ -97,7 +99,7 @@ function ChatComponent(props) {
                 },
                 debug: props.debug
             })
-            setQuestion('');
+            setIsError(false)
             console.log('client stream result: ', abortSignalRef.current, callRes);
             const {response, messageId, conversationId} = callRes || {}
 
@@ -127,7 +129,7 @@ function ChatComponent(props) {
             console.error('call service error: ', error);
             setTyping(false);
         }
-    }
+    })
 
     useEffect(() => {
         scrollToBottom()
@@ -174,7 +176,12 @@ function ChatComponent(props) {
         URL.revokeObjectURL(url);
         document.body.removeChild(link);
     })
-
+    const onReply = ({msg},e)=>{
+        setQuestion(msg);
+        setTimeout(()=>{
+            directChat(e)
+        },0)
+    }
     return (<div className="container">
         <div className="chatbox">
             <div className="top-bar">
@@ -199,6 +206,8 @@ function ChatComponent(props) {
                             item && (item.type = 'outgoing');
                             return item
                         })}
+                        onReply={onReply}
+                        isError={isError}
                     />
                     <div className='chat-bottom-line' ref={messagesEndRef}></div>
                 </div>

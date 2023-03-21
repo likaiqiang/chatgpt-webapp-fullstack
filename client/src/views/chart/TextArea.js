@@ -13,12 +13,12 @@ const CustomTextArea = (props) => {
             nativeElement.removeEventListener('keyup',onKeyUp)
         }
     },[onKeyDown,onKeyUp])
-    useEffect(()=>{
-        const {nativeElement} = ref.current
-        if(!antdProps.value){
-            nativeElement.style.height = 'auto'
-        }
-    },[antdProps.value])
+    // useEffect(()=>{
+    //     const {nativeElement} = ref.current
+    //     if(!antdProps.value){
+    //         nativeElement.style.height = 'auto'
+    //     }
+    // },[antdProps.value])
     return (
         <TextArea ref={ref} {...antdProps}/>
     )

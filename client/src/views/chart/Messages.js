@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import { List, Toast } from 'antd-mobile'
@@ -11,7 +11,7 @@ import Whether, {Else, If} from "../../components/Whether";
 
 
 const Messages = (props) => {
-    const { retMsgs, outMsgs, onItemDeleted, onEdit,onReply } =  props?.props || props || {};
+    const { retMsgs, outMsgs, onItemDeleted, onEdit,isError,onReply } =  props?.props || props || {};
 
     const rewriteItem = (text) => {
         return (e) => {
@@ -50,18 +50,21 @@ const Messages = (props) => {
         }
     }, [props]);
 
+    const msgs = useMemo(()=>{
+        return [...retMsgs,...outMsgs]
+    },[retMsgs,outMsgs])
+
     return (
-        [
-            ...retMsgs,
-            ...outMsgs,
-        ]
-        .filter(item => !!item?.msg)
-        .sort((itemA, itemB) => (itemA?.timestamp - itemB.timestamp))
-            .map(ret => (
+        msgs.sort((itemA, itemB) => (itemA?.timestamp - itemB.timestamp))
+            .map((ret,i) => (
                 <List.Item
                     key={ret.type + ret.id + ret.timestamp}
                     arrow={false}>
-                    <div className={`talking-item ${ret.type}`} key={ret.msg + ret.timestamp}>
+                    <div className={`talking-item ${ret.type}`} key={ret.msg + ret.timestamp} onClick={e=>{
+                        if(ret.type === 'outgoing' && isError && i === msgs.length - 1){
+                            onReply && onReply(ret,e)
+                        }
+                    }}>
                         <Whether value={ret.type === 'incoming'}>
                             <div className='talking-avatar'>
                                 <svg width="41" height="41" viewBox="0 0 41 41" fill="none" xmlns="http://www.w3.org/2000/svg" strokeWidth="1.5">
@@ -74,6 +77,11 @@ const Messages = (props) => {
                             <span>
                                 <ReactMarkdown>{ret.msg}</ReactMarkdown>
                             </span>
+                            <Whether value={isError && ret.type === 'outgoing' && i === msgs.length - 1}>
+                                <div className='talking-item-btns'>
+                                    <RedoOutline/>
+                                </div>
+                            </Whether>
                         </div>
                     </div>
                 </List.Item>))

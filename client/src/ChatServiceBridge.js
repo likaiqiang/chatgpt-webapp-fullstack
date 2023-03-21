@@ -40,9 +40,8 @@ export const callBridge = async (options) => {
                 const err = new Error(`Failed to send message. HTTP ${response.status} - ${response.statusText}`);
                 if (onerror) {
                     onerror(err)
-                } else {
-                    throw err;
                 }
+                throw err;
             },
             onclose() {
                 console.warn('internal close')
@@ -57,9 +56,8 @@ export const callBridge = async (options) => {
                 console.error('internal error: ', err);
                 if (onerror) {
                     onerror(err);
-                } else {
-                    throw err;
                 }
+                throw err;
             },
             onmessage(message) {
                 // { data: 'Hello', event: '', id: '', retry: undefined }
@@ -73,7 +71,7 @@ export const callBridge = async (options) => {
                     return;
                 }
                 if (message.event === 'result') {
-                    const result = JSON.parse(message.data);                            
+                    const result = JSON.parse(message.data);
                     console.log('result: ', result.response);
                     msgId = result.messageId;
                     conversationId = result.conversationId;
@@ -86,7 +84,7 @@ export const callBridge = async (options) => {
                 }
                 if (message?.event === 'error') {
                     onerror && onerror(message.data);
-                    return;
+                    throw message.data;
                 }
                 if (onmessage) {
                     onmessage(message);
