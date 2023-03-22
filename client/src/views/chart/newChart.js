@@ -77,6 +77,7 @@ function ChatComponent(props) {
         }
 
         setQuestion('');
+        setIsError(false)
         const newOutMsgs = [...outMsgs, {id: genRandomMsgId(), msg: question, timestamp: new Date().valueOf()}]
         setOutMsgs(newOutMsgs)
 

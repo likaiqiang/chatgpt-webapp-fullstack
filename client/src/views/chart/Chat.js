@@ -79,6 +79,7 @@ function ChatComponent(props) {
             return;
         }
         setQuestion('');
+        setIsError(false)
 
         const newOutMsgs = [...outMsgs, { id: genRandomMsgId(), msg: question, timestamp: new Date().valueOf() }]
         setCache({
