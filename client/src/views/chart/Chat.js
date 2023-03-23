@@ -218,8 +218,8 @@ function ChatComponent(props) {
                         value: question,
                         onChange:inputQuestion,
                         rows:1,
-                        maxLength:300,
-                        autoSize:{ minRows: 1, maxRows: 8 },
+                        maxLength:3000,
+                        autoSize:{ minRows: 1, maxRows: 20 },
                         showCount: true,
                         autoFocus: true
                     }} onKeyDown={onKeyDown}/>
