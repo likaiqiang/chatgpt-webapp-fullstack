@@ -30,9 +30,10 @@ const Item = (props) => {
             navigator('/chart?convId=' + data.convId)
         },
         moveThreshold:{
-            x:100,
-            y:100
-        }
+            x:30,
+            y:30
+        },
+        delay: 1000
     });
     return (
         <div ref={ref} style={{marginBottom:'20px'}}>
