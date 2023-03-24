@@ -29,6 +29,10 @@ const Item = (props) => {
         onClick: () => {
             navigator('/chart?convId=' + data.convId)
         },
+        moveThreshold:{
+            x:100,
+            y:100
+        }
     });
     return (
         <div ref={ref} style={{marginBottom:'20px'}}>
