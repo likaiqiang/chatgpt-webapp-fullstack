@@ -12,6 +12,10 @@ const Item = (props) => {
     const navigator = useNavigate()
     const {cache, setCache} = useContext(Context)
     useLongPress(() => {
+        if ('vibrate' in navigator) {
+            // 触发短暂的震动，时长为100毫秒
+            navigator.vibrate(100);
+        }
         Modal.confirm({
             content: '删除确认',
             onConfirm: () => {
@@ -46,6 +50,7 @@ const Item = (props) => {
                 }
                 extra={<RightOutline/>}
                 style={{borderRadius: '16px'}}
+                className={'listCard'}
             >
             </Card>
         </div>

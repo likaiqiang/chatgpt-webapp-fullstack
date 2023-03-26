@@ -7,10 +7,15 @@
     box-sizing: border-box;
 }
 .listContainer .listCard{
-    padding: 20px;
+    padding: 10px;
     text-align: left;
     background-color: white;
     border-radius: 20px;
+    -webkit-user-select:none;
+    user-select:none;
+}
+.listContainer .listCard .adm-card-header-title{
+    flex: 1;
 }
 .listContainer .main{
     flex:1;
