@@ -4,8 +4,23 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import * as serviceWorkerRegistration from './serviceWorkerRegistration';
+import {Modal} from "antd-mobile";
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
+
+window.addEventListener('beforeinstallprompt',e=>{
+    showInstallPrompt(e)
+})
+
+function showInstallPrompt(promptEvent){
+    Modal.confirm({
+        content:'是否添加到桌面',
+        onConfirm:()=>{
+            promptEvent.prompt()
+        }
+    })
+}
+
 root.render(
     <App />
 );
