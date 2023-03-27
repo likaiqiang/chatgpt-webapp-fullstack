@@ -1,37 +1,81 @@
-import {Card, Modal, Toast} from "antd-mobile";
+import {Card, Modal, Toast, Input} from "antd-mobile";
 import {AntOutline, RightOutline} from "antd-mobile-icons";
 import {useLongPress} from 'ahooks';
-import {useContext, useRef} from "react";
-import {useNavigate} from "react-router-dom";
+import {useContext, useRef, forwardRef, useImperativeHandle, useEffect} from "react";
+import {useNavigate,useLocation} from "react-router-dom";
 import cloneDeep from 'lodash.clonedeep'
 import Context from '../../context'
 
 const Item = (props) => {
-    const {data} = props
-    const ref = useRef()
+    const {data,changeActive,index,setElement=()=>{},active} = props
+    const eleRef = useRef()
     const navigator = useNavigate()
     const {cache, setCache} = useContext(Context)
+
+    const valueRef = useRef('')
     useLongPress(() => {
+        console.log('LongPress');
         if ('vibrate' in navigator) {
             // 触发短暂的震动，时长为100毫秒
             navigator.vibrate(100);
         }
-        Modal.confirm({
-            content: '删除确认',
-            onConfirm: () => {
-                const copyCache = cloneDeep(cache)
-                delete copyCache[data.convId]
-                setCache(copyCache)
-                Toast.show({
-                    icon: 'success',
-                    content: '删除成功',
-                    position: 'bottom',
-                })
-            },
+        Modal.show({
+            content: '请选择要执行的操作',
+            actions:[
+                {
+                    key: 'title',
+                    text: '更改标题',
+                },
+                {
+                    key: 'delete',
+                    text: '删除',
+                },
+            ],
+            onAction:(action,index)=>{
+                if(action.key === 'delete'){
+                    Modal.confirm({
+                        content: '删除确认',
+                        onConfirm: () => {
+                            const copyCache = cloneDeep(cache)
+                            delete copyCache[data.convId]
+                            setCache(copyCache)
+                            Toast.show({
+                                icon: 'success',
+                                content: '删除成功',
+                                position: 'bottom',
+                            })
+                        },
+                    })
+                }
+                if(action.key === 'title'){
+                    const modal = Modal.show({
+                        title:'',
+                        content: <Input placeholder={'请输入标题'} defaultValue={data.title} onChange={val=>{
+                            valueRef.current = val
+                        }}/>,
+                        actions:[
+                            {
+                                key: 'confirm',
+                                text: '确定',
+                                confirm: true
+                            }
+                        ],
+                        onAction: (action,index)=>{
+                            if(action.key === 'confirm'){
+                                const copyCache = cloneDeep(cache)
+                                copyCache[data.convId]['chat-out-msgs'][0].title = valueRef.current
+                                setCache(copyCache)
+                                Modal.clear()
+                            }
+                        }
+                    })
+                }
+            }
         })
-    }, ref, {
+    }, eleRef, {
         onClick: () => {
-            navigator('/chart?convId=' + data.convId)
+            changeActive(index)
+            navigator('/chart?convId=' + data.convId + '&title=' + data.title)
         },
         moveThreshold:{
             x:30,
@@ -39,8 +83,20 @@ const Item = (props) => {
         },
         delay: 1000
     });
+    useEffect(()=>{
+        if(active === index && eleRef.current){
+            const el = eleRef.current.querySelector('.adm-card-header-title')
+            if(el){
+                el.style.textDecoration = 'underline'
+            }
+            eleRef.current.scrollIntoView()
+        }
+    },[active,index,eleRef.current])
     return (
-        <div ref={ref} style={{marginBottom:'20px'}}>
+        <div ref={ref=>{
+            eleRef.current = ref
+            setElement(ref,index)
+        }} style={{marginBottom:'20px'}}>
             <Card
                 title={
                     <div style={{fontWeight: 'normal'}}>
@@ -56,4 +112,4 @@ const Item = (props) => {
         </div>
     )
 }
-export default Item
+export default forwardRef(Item)

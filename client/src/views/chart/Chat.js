@@ -15,7 +15,7 @@ function ChatComponent(props) {
     const [question, setQuestion] = useState("");
     const {cache,setCache} = useContext(Context)
     const {search} = useLocation()
-    const {convId} = QS.parse(search.split('?').pop())
+    const {convId,title} = QS.parse(search.split('?').pop())
 
     const outMsgs = cache[convId]['chat-out-msgs'] || []
     const retMsgs = cache[convId]['chat-ret-msgs'] || []
@@ -139,9 +139,7 @@ function ChatComponent(props) {
     }, [retMsgs, outMsgs]);
 
     useEffect(() => {
-        setTimeout(() => {
-            scrollToBottom();
-        }, 300)
+        Promise.resolve().then(scrollToBottom)
     }, []);
 
     const onCancelChat = (e) => {
@@ -193,7 +191,12 @@ function ChatComponent(props) {
                         navigator(-1)
                     }}/>
                 </div>
-                <div className="name">WebInfra</div>
+                <div className="name">
+                    <div>WebInfra</div>
+                    <Whether value={title}>
+                        {title}
+                    </Whether>
+                </div>
                 <div style={{fontSize:'2em'}}>
                     <DownlandOutline onClick={exportData}/>
                 </div>

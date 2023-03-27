@@ -1,24 +1,26 @@
 import Context from "../../context";
-import {useContext, useMemo} from "react";
+import {useContext, useEffect, useMemo, useRef, useState} from "react";
 import DataFor from "../../components/DataFor";
 import './list.css'
-import {useNavigate} from "react-router-dom";
-import {AntOutline, RightOutline} from "antd-mobile-icons";
-import {Button, Card, ErrorBlock, Modal} from "antd-mobile";
+import {useNavigate,useLocation} from "react-router-dom";
+import {Button, ErrorBlock} from "antd-mobile";
 import Whether, {Else, If} from "../../components/Whether";
 import Item from './item'
 const List = ()=>{
-    const {cache} = useContext(Context)
+    const {cache,listActive,changeListActive} = useContext(Context)
     const navigate = useNavigate()
     const charts = useMemo(()=>{
         return Object.keys(cache).map(key=>{
+            const title = cache[key]['chat-out-msgs'][0].title || cache[key]['chat-out-msgs'][0].msg
             return {
                 convId: key,
-                title: cache[key]['chat-out-msgs'][0].msg,
+                title,
                 data: cache[key]
             }
         })
     },[cache])
+
+    const elementsRefs = useRef([]);
 
     return (
         <div className={'listContainer'}>
@@ -27,9 +29,9 @@ const List = ()=>{
                     <If>
                         <DataFor list={charts} rowKey={item=>item.convId}>
                             {
-                                (item)=>{
+                                (item,i)=>{
                                     return (
-                                        <Item data={item}/>
+                                        <Item data={item} setElement={(el)=>{elementsRefs.current[i] = el}} changeActive={changeListActive} index={i} active={listActive}/>
                                     )
                                 }
                             }

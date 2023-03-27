@@ -4,11 +4,12 @@ import Chat from './views/chart/Chat';
 import NewChart from "./views/chart/newChart";
 import List from './views/list'
 import {useLocalStorage} from "./utils";
-import {useMemo} from "react";
+import {useMemo, useState} from "react";
 import Context from "./context";
 
 function App() {
     const [cache,setCache] = useLocalStorage('chart-cache',{})
+    const [listActive,changeListActive] = useState(0)
     const charts = useMemo(()=>{
         return Object.keys(cache).map(key=>cache[key])
     },[cache])
@@ -16,7 +17,9 @@ function App() {
         <div className="App">
             <Context.Provider value={{
                 cache,
-                setCache
+                setCache,
+                listActive,
+                changeListActive
             }}>
                 <HashRouter>
                     <Routes>
