@@ -44,6 +44,7 @@ const List = ()=>{
                                             onContextMenu={(position,content)=>{
                                                 popperRef.current.show(position,content)
                                             }}
+                                            popper={popperRef}
                                         />
                                     )
                                 }

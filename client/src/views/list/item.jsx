@@ -42,6 +42,7 @@ const Item = (props) => {
                         position: 'bottom',
                     })
                     Modal.clear()
+                    if(props?.popper?.current) props.popper.current.hide()
                     if(typeof cb === 'function'){
                         cb()
                     }
@@ -68,6 +69,7 @@ const Item = (props) => {
                         copyCache[data.convId]['chat-out-msgs'][0].title = valueRef.current
                         setCache(copyCache)
                         Modal.clear()
+                        if(props.popper) props.popper.hide()
                         if(typeof cb === 'function'){
                             cb()
                         }

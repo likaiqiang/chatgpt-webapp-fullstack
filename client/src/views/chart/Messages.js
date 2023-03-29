@@ -8,8 +8,6 @@ import ReactMarkdown from 'react-markdown'
 import { CopyBtn, DeleteBtn } from './Shapes';
 import Whether, {Else, If} from "../../components/Whether";
 
-
-
 const Messages = (props) => {
     const { retMsgs, outMsgs, onItemDeleted, onEdit,isError,onReply } =  props?.props || props || {};
 

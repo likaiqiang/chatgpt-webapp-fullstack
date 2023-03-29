@@ -39,3 +39,19 @@
 .adm-popover-inner{
   background-color: #fff !important;
 }
+.adm-popover-menu-item {
+  display: flex;
+  padding-left: 20px;
+  justify-content: flex-start;
+  align-items: center;
+  position: relative;
+}
+.adm-plain-anchor {
+  color: unset;
+  transition: none;
+}
+.adm-popover-menu-item-text {
+  flex: auto;
+  padding: 14px 20px 14px 0;
+  border-top: solid 1px var(--border-color);
+}
