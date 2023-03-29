@@ -44,6 +44,7 @@ const Item = (props) => {
                                 content: '删除成功',
                                 position: 'bottom',
                             })
+                            Modal.clear()
                         },
                     })
                 }
