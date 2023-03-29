@@ -9,7 +9,7 @@ import Context from "./context";
 
 function App() {
     const [cache,setCache] = useLocalStorage('chart-cache',{})
-    const [listActive,changeListActive] = useState(0)
+    const [listActive,changeListActive] = useState(-1)
     const charts = useMemo(()=>{
         return Object.keys(cache).map(key=>cache[key])
     },[cache])

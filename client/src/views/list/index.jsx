@@ -6,6 +6,7 @@ import {useNavigate,useLocation} from "react-router-dom";
 import {Button, ErrorBlock} from "antd-mobile";
 import Whether, {Else, If} from "../../components/Whether";
 import Item from './item'
+import CustomPopper from "../../components/Popper";
 const List = ()=>{
     const {cache,listActive,changeListActive} = useContext(Context)
     const navigate = useNavigate()
@@ -21,6 +22,7 @@ const List = ()=>{
     },[cache])
 
     const elementsRefs = useRef([]);
+    const popperRef = useRef()
 
     return (
         <div className={'listContainer'}>
@@ -31,7 +33,18 @@ const List = ()=>{
                             {
                                 (item,i)=>{
                                     return (
-                                        <Item data={item} setElement={(el)=>{elementsRefs.current[i] = el}} changeActive={changeListActive} index={i} active={listActive}/>
+                                        <Item
+                                            data={item}
+                                            setElement={(el)=>{elementsRefs.current[i] = el}}
+                                            changeActive={changeListActive} index={i}
+                                            active={listActive}
+                                            onPreClick={()=>{
+                                                return !popperRef.current.status
+                                            }}
+                                            onContextMenu={(position,content)=>{
+                                                popperRef.current.show(position,content)
+                                            }}
+                                        />
                                     )
                                 }
                             }
@@ -53,6 +66,7 @@ const List = ()=>{
                     开始一个新问题
                 </Button>
             </Whether>
+            <CustomPopper ref={popperRef}/>
         </div>
     )
 }

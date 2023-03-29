@@ -36,3 +36,6 @@
     transform: rotate(360deg);
   }
 }
+.adm-popover-inner{
+  background-color: #fff !important;
+}

@@ -1,5 +1,5 @@
 diff --git a/node_modules/ahooks/es/useLongPress/index.js b/node_modules/ahooks/es/useLongPress/index.js
-index 2070f2e..09cdc6d 100644
+index 2070f2e..fdbc565 100644
 --- a/node_modules/ahooks/es/useLongPress/index.js
 +++ b/node_modules/ahooks/es/useLongPress/index.js
 @@ -22,6 +22,7 @@ function useLongPress(onLongPress, target, {
@@ -10,19 +10,21 @@ index 2070f2e..09cdc6d 100644
    useEffectWithTarget(() => {
      const targetElement = getTargetElement(target);
      if (!(targetElement === null || targetElement === void 0 ? void 0 : targetElement.addEventListener)) {
-@@ -56,6 +57,7 @@ function useLongPress(onLongPress, target, {
+@@ -56,6 +57,8 @@ function useLongPress(onLongPress, target, {
        };
      }
      const onStart = event => {
++      if( typeof event.button !== 'undefined' && event.button !== 0) return
 +      isOverThresholdRef.current = false
        if (hasMoveThreshold) {
          const {
            clientX,
-@@ -70,7 +72,10 @@ function useLongPress(onLongPress, target, {
+@@ -70,12 +73,17 @@ function useLongPress(onLongPress, target, {
        }, delay);
      };
      const onMove = event => {
 -      if (timerRef.current && overThreshold(event)) {
++      if( typeof event.button !== 'undefined' && event.button !== 0) return
 +      const isOverThreshold = overThreshold(event)
 +      isOverThresholdRef.current = isOverThreshold
 +
@@ -30,7 +32,13 @@ index 2070f2e..09cdc6d 100644
          clearInterval(timerRef.current);
          timerRef.current = undefined;
        }
-@@ -83,7 +88,7 @@ function useLongPress(onLongPress, target, {
+     };
+     const onEnd = (event, shouldTriggerClick = false) => {
++      if( typeof event.button !== 'undefined' && event.button !== 0) return
+       var _a;
+       if (timerRef.current) {
+         clearTimeout(timerRef.current);
+@@ -83,7 +91,7 @@ function useLongPress(onLongPress, target, {
        if (isTriggeredRef.current) {
          (_a = onLongPressEndRef.current) === null || _a === void 0 ? void 0 : _a.call(onLongPressEndRef, event);
        }
@@ -40,7 +48,7 @@ index 2070f2e..09cdc6d 100644
        }
        isTriggeredRef.current = false;
 diff --git a/node_modules/ahooks/lib/useLongPress/index.js b/node_modules/ahooks/lib/useLongPress/index.js
-index 4a73c61..9948553 100644
+index 4a73c61..d94fd43 100644
 --- a/node_modules/ahooks/lib/useLongPress/index.js
 +++ b/node_modules/ahooks/lib/useLongPress/index.js
 @@ -8,6 +8,7 @@ exports["default"] = void 0;
@@ -60,26 +68,35 @@ index 4a73c61..9948553 100644
    (0, _useEffectWithTarget["default"])(function () {
      var targetElement = (0, _domTarget.getTargetElement)(target);
      if (!(targetElement === null || targetElement === void 0 ? void 0 : targetElement.addEventListener)) {
-@@ -63,6 +66,7 @@ function useLongPress(onLongPress, target) {
+@@ -63,6 +66,8 @@ function useLongPress(onLongPress, target) {
        };
      }
      var onStart = function onStart(event) {
++      if( typeof event.button !== 'undefined' && event.button !== 0) return
 +      isOverThresholdRef.current = false
        if (hasMoveThreshold) {
          var _getClientPosition2 = getClientPosition(event),
            clientX = _getClientPosition2.clientX,
-@@ -76,7 +80,9 @@ function useLongPress(onLongPress, target) {
+@@ -76,12 +81,16 @@ function useLongPress(onLongPress, target) {
        }, delay);
      };
      var onMove = function onMove(event) {
 -      if (timerRef.current && overThreshold(event)) {
++      if( typeof event.button !== 'undefined' && event.button !== 0) return
 +      const isOverThreshold = overThreshold(event)
 +      isOverThresholdRef.current = isOverThreshold
 +      if (timerRef.current && isOverThreshold)) {
          clearInterval(timerRef.current);
          timerRef.current = undefined;
        }
-@@ -90,7 +96,7 @@ function useLongPress(onLongPress, target) {
+     };
+-    var onEnd = function onEnd(event) {
++    var onEnd = function onEnd(event)
++      if( typeof event.button !== 'undefined' && event.button !== 0) return
+       var shouldTriggerClick = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
+       var _a;
+       if (timerRef.current) {
+@@ -90,7 +99,7 @@ function useLongPress(onLongPress, target) {
        if (isTriggeredRef.current) {
          (_a = onLongPressEndRef.current) === null || _a === void 0 ? void 0 : _a.call(onLongPressEndRef, event);
        }
