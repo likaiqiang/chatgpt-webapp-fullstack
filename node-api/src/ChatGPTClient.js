@@ -12,14 +12,13 @@ const tokenizersCache = {};
 export default class ChatGPTClient {
     constructor(
         apiKey,
-        cacheInstance = null,
         options = {},
         cacheOptions = {},
     ) {
         this.apiKey = apiKey;
 
         cacheOptions.namespace = cacheOptions.namespace || 'chatgpt';
-        this.conversationsCache = cacheInstance || new Keyv(cacheOptions);
+        this.conversationsCache = new Keyv(cacheOptions);
 
         this.setOptions(options);
     }

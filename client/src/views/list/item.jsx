@@ -10,6 +10,10 @@ import {useImmer} from "use-immer";
 import Whether from "../../components/Whether";
 import DataFor from "../../components/DataFor";
 
+function isMobile() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
 const Item = (props) => {
     const {data,changeActive,index,setElement=()=>{},active} = props
     const eleRef = useRef()
@@ -81,6 +85,7 @@ const Item = (props) => {
 
     const onContextMenu = useMemoizedFn((event)=>{
         event.preventDefault();
+        if(isMobile()) return
         const content = (
             <div className={'adm-popover-inner'}>
                 <DataFor list={actions} rowKey={item=>item.key}>

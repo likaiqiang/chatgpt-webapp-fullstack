@@ -6,7 +6,6 @@ import fastifyStatic from '@fastify/static';
 import { FastifySSEPlugin } from '@waylaidwanderer/fastify-sse-v2';
 import fs from 'fs';
 import { pathToFileURL } from 'url';
-import Keyv from 'keyv';
 import { KeyvFile } from 'keyv-file';
 import ChatGPTClient from '../src/ChatGPTClient.js';
 import ChatGPTBrowserClient from '../src/ChatGPTBrowserClient.js';
@@ -51,7 +50,6 @@ if (settings.storageFilePath && !settings.cacheOptions.store) {
 }
 
 const clientToUse = settings.apiOptions?.clientToUse || settings.clientToUse || 'chatgpt';
-const conversationsCache = new Keyv(settings.cacheOptions);
 
 const perMessageClientOptionsWhitelist = settings.apiOptions?.perMessageClientOptionsWhitelist || null;
 
@@ -274,7 +272,6 @@ function getClient(clientToUseForMessage) {
             console.log('api key - ', configApiKey);
             return new ChatGPTClient(
                 configApiKey,
-                conversationsCache,
                 settings.chatGptClient,
                 settings.cacheOptions,
             );
