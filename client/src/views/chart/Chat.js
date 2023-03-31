@@ -8,7 +8,7 @@ import './Chat.css';
 import Context from "../../context";
 import {useLocation, useNavigate} from "react-router-dom";
 import QS from "qs";
-import {useMemoizedFn} from "ahooks";
+import {useLatest, useMemoizedFn} from "ahooks";
 import TextArea from './TextArea'
 import cloneDeep from "lodash.clonedeep";
 import {useScrollToBottom} from "../../hooks";
@@ -21,6 +21,7 @@ function ChatComponent(props) {
 
     const outMsgs = cache[convId]['chat-out-msgs'] || []
     const retMsgs = cache[convId]['chat-ret-msgs'] || []
+    const retMsgsRef = useLatest(retMsgs)
 
     // const [outMsgs, setOutMsgs] = useLocalStorage('chat-out-msgs', []);
     // // 人的提问
@@ -70,16 +71,10 @@ function ChatComponent(props) {
     })
     const onmessage = useMemoizedFn(({message,msgId,conversationId})=>{
         if(typing){
-            setMsgId(msgId);
-            const chatRetMsgs = cloneDeep(cache[convId]['chat-ret-msgs'])
+            const chatRetMsgs = cloneDeep(retMsgsRef.current)
             let typingMsg = chatRetMsgs.pop()
             if(typingMsg){
-                if(typingMsg.id === null){
-                    typingMsg = Object.assign({},typingMsg,{id:msgId,msg:message,timestamp:new Date().valueOf()})
-                }
-                else{
-                    typingMsg = Object.assign({},typingMsg,{msg: typingMsg.msg + message})
-                }
+                typingMsg = Object.assign({},typingMsg,{msg: typingMsg.msg + message})
                 chatRetMsgs.push(typingMsg)
                 setCache({
                     ...cache,
@@ -141,7 +136,20 @@ function ChatComponent(props) {
             })
             setIsError(false)
             setTyping(false);
-
+            const {response,conversationId,messageId} = callRes
+            const cloneRetMsgs = cloneDeep(retMsgsRef.current)
+            const typingChart = cloneRetMsgs.pop()
+            typingChart.id = messageId
+            retMsgsRef.current[retMsgsRef.current.length - 1].id = messageId
+            cloneRetMsgs.push(typingChart)
+            setCache({
+                ...cache,
+                [convId]:{
+                    "chat-out-msgs": newOutMsgs,
+                    "chat-ret-msgs":cloneRetMsgs
+                }
+            })
+            setMsgId(messageId)
             return callRes;
         } catch (error) {
             console.error('call service error: ', error);

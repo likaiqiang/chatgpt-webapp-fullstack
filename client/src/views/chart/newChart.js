@@ -8,7 +8,7 @@ import Messages from './Messages';
 import './Chat.css';
 import Context from "../../context";
 import TextArea from './TextArea'
-import {useMemoizedFn} from "ahooks";
+import {useLatest, useMemoizedFn} from "ahooks";
 import cloneDeep from "lodash.clonedeep";
 import {useScrollToBottom} from "../../hooks";
 
@@ -24,12 +24,13 @@ function ChatComponent(props) {
 
     const [outMsgs, setOutMsgs] = useState([])
     const [retMsgs, setRetMsgs] = useState([])
+    const retMsgsRef = useLatest(retMsgs)
 
     const [msgId, setMsgId] = useState('');
     const [convId, setConvId] = useState('');
     const [typing, setTyping] = useState(false);
     const [isError,setIsError] = useState(false)
-    const openedCache = useRef({})
+    const virtualConvIdRef = useRef('virtualConvId')
 
     const abortSignalRef = useRef(null);
 
@@ -53,32 +54,13 @@ function ChatComponent(props) {
 
     const onmessage = useMemoizedFn(({message,msgId,conversationId})=>{
         if(typing){
-            setMsgId(msgId);
-            if(!convId){
-                setCache({
-                    ...cache,
-                    [conversationId]: {
-                        "chat-out-msgs": outMsgs,
-                        "chat-ret-msgs": [...retMsgs, Object.assign({},{id: msgId, msg: message, timestamp:new Date().valueOf()})]
-                    }
-                })
+            const chatRetMsgs = cloneDeep(retMsgsRef.current)
+            let typingMsg = chatRetMsgs.pop()
+            if(typingMsg){
+                typingMsg = Object.assign({},typingMsg,{msg: typingMsg.msg + message})
+                chatRetMsgs.push(typingMsg)
+                setRetMsgs(chatRetMsgs)
             }
-            else{
-                const chatRetMsgs = cloneDeep(cache[conversationId]['chat-ret-msgs'])
-                let typingMsg = chatRetMsgs.pop()
-                if(typingMsg){
-                    typingMsg = Object.assign({},typingMsg,{msg: typingMsg.msg + message})
-                    chatRetMsgs.push(typingMsg)
-                    setCache({
-                        ...cache,
-                        [convId]:{
-                            "chat-out-msgs": outMsgs,
-                            "chat-ret-msgs":chatRetMsgs
-                        }
-                    })
-                }
-            }
-            setConvId(conversationId);
         }
         updateScroll()
     })
@@ -86,7 +68,8 @@ function ChatComponent(props) {
 
 
     const onopen = () => {
-        console.log('opened');
+        console.log('onopen');
+        setRetMsgs([...retMsgs,{ id: null, msg: '', timestamp: new Date().valueOf() }])
     }
 
     const onclose = () => {
@@ -125,9 +108,7 @@ function ChatComponent(props) {
                     conversationId: convId,
                 },
                 onmessage,
-                onopen:()=>{
-                    console.log('onOpen')
-                },
+                onopen,
                 onclose,
                 onerror,
                 getSignal: (sig) => {
@@ -137,6 +118,23 @@ function ChatComponent(props) {
             })
             setIsError(false)
             console.log('client stream result: ', abortSignalRef.current, callRes);
+            const {response,conversationId,messageId} = callRes
+            debugger
+            const cloneRetMsgs = cloneDeep(retMsgsRef.current)
+            const typingChart = cloneRetMsgs.pop()
+            typingChart.id = messageId
+            retMsgsRef.current[retMsgsRef.current.length - 1].id = messageId
+            cloneRetMsgs.push(typingChart)
+            setCache({
+                ...cache,
+                [conversationId]:{
+                    "chat-out-msgs": newOutMsgs,
+                    "chat-ret-msgs":cloneRetMsgs
+                }
+            })
+            setMsgId(messageId)
+            setConvId(conversationId)
+
             setTyping(false);
 
             return callRes;
