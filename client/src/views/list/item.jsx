@@ -18,7 +18,7 @@ const Item = (props) => {
     const {data,changeActive,index,setElement=()=>{},active} = props
     const eleRef = useRef()
     const navigate = useNavigate()
-    const {cache, setCache} = useContext(Context)
+    const {cache, setCache,changeListActive} = useContext(Context)
 
     const actions = [
         {
@@ -46,6 +46,7 @@ const Item = (props) => {
                         position: 'bottom',
                     })
                     Modal.clear()
+                    changeListActive(-1)
                     if(props?.popper?.current) props.popper.current.hide()
                     if(typeof cb === 'function'){
                         cb()

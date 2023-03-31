@@ -37,15 +37,11 @@ function ChatComponent(props) {
 
     const navigator = useNavigate()
 
-    const {update:updateScroll}  = useScrollToBottom(()=>{
-        messagesEndRef.current?.scrollIntoView({behavior: "smooth"})
-        console.log('scroll to bottom');
-    })
-
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({behavior: "smooth"})
         console.log('scroll to bottom');
     }
+    const {update:updateScroll}  = useScrollToBottom(scrollToBottom)
 
     const genRandomMsgId = () => {
         return `msg-${new Date().valueOf()}-${Math.floor(Math.random() * 10)}`;
