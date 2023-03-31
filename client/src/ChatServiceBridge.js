@@ -87,9 +87,12 @@ export const callBridge = async (options) => {
                     throw message.data;
                 }
                 if (onmessage) {
-                    onmessage(message);
+                    onmessage({
+                        message: JSON.parse(message.data),
+                        msgId,
+                        conversationId
+                    });
                 }
-                console.log('onmessage: ', message);
                 reply += JSON.parse(message.data);
             },
         });

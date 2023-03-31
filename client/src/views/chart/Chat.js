@@ -10,6 +10,7 @@ import {useLocation, useNavigate} from "react-router-dom";
 import QS from "qs";
 import {useMemoizedFn} from "ahooks";
 import TextArea from './TextArea'
+import cloneDeep from "lodash.clonedeep";
 
 function ChatComponent(props) {
     const [question, setQuestion] = useState("");
@@ -49,18 +50,43 @@ function ChatComponent(props) {
         setQuestion(val);
     }
 
-    const onmessage = (msgObj) => {
-        // { data: 'Hello', event: '', id: '', retry: undefined }
-        scrollToBottom()
-    }
-
-    const onopen = () => {
-        console.log('opened');
-    }
-
     const onclose = () => {
 
     }
+    const onopen = useMemoizedFn(()=>{
+        //历史聊天有会话id，所以需要id为null判断是否为正在输出的消息
+        setCache({
+            ...cache,
+            [convId]:{
+                "chat-out-msgs": outMsgs,
+                "chat-ret-msgs": [...retMsgs, { id: null, msg: '', timestamp: new Date().valueOf() }]
+            }
+        })
+    })
+    const onmessage = useMemoizedFn(({message,msgId,conversationId})=>{
+        if(typing){
+            setMsgId(msgId);
+            const chatRetMsgs = cloneDeep(cache[convId]['chat-ret-msgs'])
+            let typingMsg = chatRetMsgs.pop()
+            if(typingMsg){
+                if(typingMsg.id === null){
+                    typingMsg = Object.assign({},typingMsg,{id:msgId,msg:message,timestamp:new Date().valueOf()})
+                }
+                else{
+                    typingMsg = Object.assign({},typingMsg,{msg: typingMsg.msg + message})
+                }
+                chatRetMsgs.push(typingMsg)
+                setCache({
+                    ...cache,
+                    [convId]:{
+                        "chat-out-msgs": outMsgs,
+                        "chat-ret-msgs":chatRetMsgs
+                    }
+                })
+            }
+            scrollToBottom()
+        }
+    })
     const onerror = (message) => {
         Toast.show({
             icon: 'fail',
@@ -109,22 +135,7 @@ function ChatComponent(props) {
                 debug: props.debug
             })
             setIsError(false)
-            const { response, messageId, conversationId } = callRes || {}
-
-            if (messageId) {
-                setMsgId(messageId);
-            }
-
-
-            // TODO: Persist request feedback to mysql
             setTyping(false);
-            setCache({
-                ...cache,
-                [convId]:{
-                    "chat-out-msgs": newOutMsgs,
-                    "chat-ret-msgs": [...retMsgs, { id: messageId, msg: response, timestamp: new Date().valueOf() }]
-                }
-            })
 
             return callRes;
         } catch (error) {

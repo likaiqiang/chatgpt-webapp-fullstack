@@ -9,6 +9,7 @@ import './Chat.css';
 import Context from "../../context";
 import TextArea from './TextArea'
 import {useMemoizedFn} from "ahooks";
+import cloneDeep from "lodash.clonedeep";
 
 function ChatComponent(props) {
     const [question, setQuestion] = useState("");
@@ -27,6 +28,7 @@ function ChatComponent(props) {
     const [convId, setConvId] = useState('');
     const [typing, setTyping] = useState(false);
     const [isError,setIsError] = useState(false)
+    const openedCache = useRef({})
 
     const abortSignalRef = useRef(null);
 
@@ -47,10 +49,39 @@ function ChatComponent(props) {
         setQuestion(val);
     }
 
-    const onmessage = (msgObj) => {
-        // { data: 'Hello', event: '', id: '', retry: undefined }
+    const onmessage = useMemoizedFn(({message,msgId,conversationId})=>{
+        if(typing){
+            setMsgId(msgId);
+            if(!convId){
+                setCache({
+                    ...cache,
+                    [conversationId]: {
+                        "chat-out-msgs": outMsgs,
+                        "chat-ret-msgs": [...retMsgs, Object.assign({},{id: msgId, msg: message, timestamp:new Date().valueOf()})]
+                    }
+                })
+            }
+            else{
+                const chatRetMsgs = cloneDeep(cache[conversationId]['chat-ret-msgs'])
+                let typingMsg = chatRetMsgs.pop()
+                if(typingMsg){
+                    typingMsg = Object.assign({},typingMsg,{msg: typingMsg.msg + message})
+                    chatRetMsgs.push(typingMsg)
+                    setCache({
+                        ...cache,
+                        [convId]:{
+                            "chat-out-msgs": outMsgs,
+                            "chat-ret-msgs":chatRetMsgs
+                        }
+                    })
+                }
+            }
+            setConvId(conversationId);
+        }
         scrollToBottom()
-    }
+    })
+
+
 
     const onopen = () => {
         console.log('opened');
@@ -92,7 +123,9 @@ function ChatComponent(props) {
                     conversationId: convId,
                 },
                 onmessage,
-                onopen,
+                onopen:()=>{
+                    console.log('onOpen')
+                },
                 onclose,
                 onerror,
                 getSignal: (sig) => {
@@ -102,28 +135,7 @@ function ChatComponent(props) {
             })
             setIsError(false)
             console.log('client stream result: ', abortSignalRef.current, callRes);
-            const {response, messageId, conversationId} = callRes || {}
-
-            if (messageId) {
-                setMsgId(messageId);
-            }
-            if (conversationId) {
-                setConvId(conversationId);
-            }
-
-            // TODO: Persist request feedback to mysql
             setTyping(false);
-            const newRetMsgs = [...retMsgs, {id: messageId, msg: response, timestamp: new Date().valueOf()}]
-            setRetMsgs(newRetMsgs)
-            if (conversationId) {
-                setCache({
-                    ...cache,
-                    [conversationId]: {
-                        "chat-out-msgs": newOutMsgs,
-                        "chat-ret-msgs": newRetMsgs
-                    }
-                })
-            }
 
             return callRes;
         } catch (error) {

@@ -5,6 +5,8 @@ import { List, Toast } from 'antd-mobile'
 import {UserOutline, EditSOutline, RedoOutline} from 'antd-mobile-icons'
 import { fetch as fetchPolyfill } from 'whatwg-fetch'
 import ReactMarkdown from 'react-markdown'
+import {Prism as SyntaxHighlighter} from 'react-syntax-highlighter'
+import {dark} from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { CopyBtn, DeleteBtn } from './Shapes';
 import Whether, {Else, If} from "../../components/Whether";
 
@@ -73,7 +75,27 @@ const Messages = (props) => {
                         </Whether>
                         <div className={`bubble`} key={ret.msg}>
                             <span>
-                                <ReactMarkdown>{ret.msg}</ReactMarkdown>
+                                <ReactMarkdown
+                                    children={ret.msg}
+                                    components={{
+                                        code({node, inline, className, children, ...props}) {
+                                            const match = /language-(\w+)/.exec(className || '')
+                                            return !inline && match ? (
+                                                <SyntaxHighlighter
+                                                    children={String(children).replace(/\n$/, '')}
+                                                    style={dark}
+                                                    language={match[1]}
+                                                    PreTag="div"
+                                                    {...props}
+                                                />
+                                            ) : (
+                                                <code className={className} {...props}>
+                                                    {children}
+                                                </code>
+                                            )
+                                        }
+                                    }}
+                                />
                             </span>
                             <Whether value={isError && ret.type === 'outgoing' && i === msgs.length - 1}>
                                 <div className='talking-item-btns'>
