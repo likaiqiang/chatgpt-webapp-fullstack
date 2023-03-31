@@ -83,7 +83,7 @@ const Messages = (props) => {
                                                 <Whether value={!inline}>
                                                     <If>
                                                         <SyntaxHighlighter
-                                                            children={String(children).replace(/\n$/, '')}
+                                                            children={String(children)}
                                                             style={vscDarkPlus}
                                                             language={match ? match[1] : 'kotlin'}
                                                             PreTag="div"
