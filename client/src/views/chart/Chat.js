@@ -11,6 +11,7 @@ import QS from "qs";
 import {useMemoizedFn} from "ahooks";
 import TextArea from './TextArea'
 import cloneDeep from "lodash.clonedeep";
+import {useScrollToBottom} from "../../hooks";
 
 function ChatComponent(props) {
     const [question, setQuestion] = useState("");
@@ -36,6 +37,11 @@ function ChatComponent(props) {
     const messagesEndRef = useRef(null)
 
     const navigator = useNavigate()
+
+    const {update:updateScroll}  = useScrollToBottom(()=>{
+        messagesEndRef.current?.scrollIntoView({behavior: "smooth"})
+        console.log('scroll to bottom');
+    })
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -84,7 +90,7 @@ function ChatComponent(props) {
                     }
                 })
             }
-            scrollToBottom()
+            updateScroll()
         }
     })
     const onerror = (message) => {

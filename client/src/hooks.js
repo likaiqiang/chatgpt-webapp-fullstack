@@ -1,4 +1,5 @@
 import {useState} from "react";
+import {useThrottleEffect} from "ahooks";
 
 export function useInput(initialValue) {
     const [value, setValue] = useState(initialValue);
@@ -12,4 +13,19 @@ export function useInput(initialValue) {
         value,
         onChange: handleChange
     };
+}
+export const useScrollToBottom = (cb = ()=>{})=>{
+    const [sign, setSign] = useState(0);
+    useThrottleEffect(
+        cb,
+        [sign],
+        {
+            wait: 300,
+        },
+    );
+    return {
+        update:()=>{
+            setSign(sign + 1)
+        }
+    }
 }

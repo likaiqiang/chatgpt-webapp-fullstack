@@ -6,8 +6,7 @@ import {UserOutline, EditSOutline, RedoOutline} from 'antd-mobile-icons'
 import { fetch as fetchPolyfill } from 'whatwg-fetch'
 import ReactMarkdown from 'react-markdown'
 import {Prism as SyntaxHighlighter} from 'react-syntax-highlighter'
-import {dark} from 'react-syntax-highlighter/dist/esm/styles/prism'
-import { CopyBtn, DeleteBtn } from './Shapes';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import Whether, {Else, If} from "../../components/Whether";
 
 const Messages = (props) => {
@@ -80,18 +79,23 @@ const Messages = (props) => {
                                     components={{
                                         code({node, inline, className, children, ...props}) {
                                             const match = /language-(\w+)/.exec(className || '')
-                                            return !inline && match ? (
-                                                <SyntaxHighlighter
-                                                    children={String(children).replace(/\n$/, '')}
-                                                    style={dark}
-                                                    language={match[1]}
-                                                    PreTag="div"
-                                                    {...props}
-                                                />
-                                            ) : (
-                                                <code className={className} {...props}>
-                                                    {children}
-                                                </code>
+                                            return (
+                                                <Whether value={!inline}>
+                                                    <If>
+                                                        <SyntaxHighlighter
+                                                            children={String(children).replace(/\n$/, '')}
+                                                            style={vscDarkPlus}
+                                                            language={match ? match[1] : 'kotlin'}
+                                                            PreTag="div"
+                                                            {...props}
+                                                        />
+                                                    </If>
+                                                    <Else>
+                                                        <code className={className} {...props}>
+                                                            {children}
+                                                        </code>
+                                                    </Else>
+                                                </Whether>
                                             )
                                         }
                                     }}
