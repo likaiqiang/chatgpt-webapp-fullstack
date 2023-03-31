@@ -30,4 +30,4 @@ OPENAI_API_KEY=sk-Ek6f5n*q7X*8I2mgH****T***F**I97ON**y*BzUpc,sk-Ek6f5n*q7X*8I2mg
 由于我的apikey是唯一的，我不太想把我的网址共享出来。不过可以选择自己部署，我的后端服务部署在阿里云函数计算上，前端代码部署在阿里云oss上，阿里云oss绑定自定义域名，就可以托管静态页面，每个域名都可以领取免费ssl证书，这样网站就能支持pwa。
 ## License
 
-[MIT](./LICENSE)
+[GPL-3.0 license](./LICENSE)
