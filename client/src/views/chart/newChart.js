@@ -69,7 +69,7 @@ function ChatComponent(props) {
 
     const onopen = () => {
         console.log('onopen');
-        setRetMsgs([...retMsgs,{ id: null, msg: '', timestamp: new Date().valueOf() }])
+        setRetMsgs([...retMsgs,{ id: null, msg: '', timestamp: new Date().valueOf(),done:false }])
     }
 
     const onclose = () => {
@@ -124,8 +124,10 @@ function ChatComponent(props) {
 
             typingChart.id = messageId
             typingChart.msg = response
+            typingChart.done = true
             retMsgsRef.current[retMsgsRef.current.length - 1].id = messageId
             retMsgsRef.current[retMsgsRef.current.length - 1].msg = response
+            retMsgsRef.current[retMsgsRef.current.length - 1].done = true
 
             cloneRetMsgs.push(typingChart)
             setCache({

@@ -65,7 +65,7 @@ function ChatComponent(props) {
             ...cache,
             [convId]:{
                 "chat-out-msgs": outMsgs,
-                "chat-ret-msgs": [...retMsgs, { id: null, msg: '', timestamp: new Date().valueOf() }]
+                "chat-ret-msgs": [...retMsgs, { id: null, msg: '', timestamp: new Date().valueOf(),done:false }]
             }
         })
     })
@@ -142,8 +142,10 @@ function ChatComponent(props) {
 
             typingChart.id = messageId
             typingChart.msg = response
+            typingChart.done = true
             retMsgsRef.current[retMsgsRef.current.length - 1].id = messageId
             retMsgsRef.current[retMsgsRef.current.length - 1].msg = response
+            retMsgsRef.current[retMsgsRef.current.length - 1].done = true
 
             cloneRetMsgs.push(typingChart)
             setCache({
