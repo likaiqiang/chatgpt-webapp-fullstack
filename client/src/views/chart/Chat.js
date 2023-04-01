@@ -139,8 +139,12 @@ function ChatComponent(props) {
             const {response,conversationId,messageId} = callRes
             const cloneRetMsgs = cloneDeep(retMsgsRef.current)
             const typingChart = cloneRetMsgs.pop()
+
             typingChart.id = messageId
+            typingChart.msg = response
             retMsgsRef.current[retMsgsRef.current.length - 1].id = messageId
+            retMsgsRef.current[retMsgsRef.current.length - 1].msg = response
+
             cloneRetMsgs.push(typingChart)
             setCache({
                 ...cache,

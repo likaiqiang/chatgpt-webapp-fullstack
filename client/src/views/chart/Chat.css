@@ -250,7 +250,7 @@
     margin: 5px;
     font-size: 0.7em;
     padding: 10px 10px 10px 12px;
-    border-radius: 20px; 
+    border-radius: 20px;
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -261,7 +261,7 @@
     width: 24px;
     height: 24px;
     border-radius: 50%;
-    overflow: hidden; 
+    overflow: hidden;
     margin-left: 0;
     margin-right: 5px;
 }
@@ -305,7 +305,7 @@
     display: none;
     -ms-overflow-style: none;  /* IE and Edge */
   }
-  
+
 
 .lower {
     margin-top: 45px;
@@ -476,3 +476,14 @@ footer a:hover {
         opacity: 0.5;
     }
 }
+
+.codebox-handler {
+    --tw-text-opacity: 1;
+    color: rgba(217, 217, 227, var(--tw-text-opacity));
+    padding: 0 10px;
+    border-top-right-radius:5px;
+    border-top-left-radius:5px;
+    line-height: 32px;
+
+}
+
