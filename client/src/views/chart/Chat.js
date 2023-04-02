@@ -87,15 +87,26 @@ function ChatComponent(props) {
             updateScroll()
         }
     })
-    const onerror = (message) => {
+    const onerror = useMemoizedFn((message) => {
         Toast.show({
             icon: 'fail',
             content: '提问失败',
             maskClickable: false,
             duration: 2000,
         })
+        const newRetMsgs = cloneDeep(retMsgs)
+        if(newRetMsgs[newRetMsgs.length - 1].id === null){
+            newRetMsgs.pop()
+            setCache({
+                ...cache,
+                [convId]:{
+                    "chat-out-msgs": outMsgs,
+                    "chat-ret-msgs":newRetMsgs
+                }
+            })
+        }
         setIsError(true)
-    }
+    })
     const directChat = useMemoizedFn(async function (e) {
         e && e.preventDefault();
         if (!question) {

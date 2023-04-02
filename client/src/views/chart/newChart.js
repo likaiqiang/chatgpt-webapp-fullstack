@@ -74,15 +74,21 @@ function ChatComponent(props) {
 
     const onclose = () => {
     }
-    const onerror = (message) => {
+    const onerror = useMemoizedFn(() => {
         Toast.show({
             icon: 'fail',
             content: '提问失败',
             maskClickable: false,
             duration: 2000,
         })
+        const newRetMsgs = cloneDeep(retMsgs)
+        if(newRetMsgs[newRetMsgs.length - 1].id === null){
+            newRetMsgs.pop()
+            setRetMsgs(newRetMsgs)
+        }
+
         setIsError(true)
-    }
+    })
     const directChat = useMemoizedFn(async function (e) {
         e.preventDefault();
         if (!question) {
