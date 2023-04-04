@@ -2,6 +2,7 @@ import React, {useEffect, useState, useRef, useContext} from 'react';
 import {Toast, Button, Modal, SafeArea, NoticeBar} from 'antd-mobile'
 import {PlayOutline, HeartOutline, LeftOutline, AntOutline, DownlandOutline} from 'antd-mobile-icons'
 import {useLocation, useNavigate} from 'react-router-dom'
+import {flushSync} from 'react-dom'
 import Whether, {If, Else} from "../../components/Whether";
 import {callBridge} from '../../ChatServiceBridge';
 import Messages from './Messages';
@@ -24,13 +25,13 @@ function ChatComponent(props) {
 
     const [outMsgs, setOutMsgs] = useState([])
     const [retMsgs, setRetMsgs] = useState([])
-    const retMsgsRef = useLatest(retMsgs)
 
     const [msgId, setMsgId] = useState('');
     const [convId, setConvId] = useState('');
     const [typing, setTyping] = useState(false);
     const [isError,setIsError] = useState(false)
-    const virtualConvIdRef = useRef('virtualConvId')
+
+    console.log('render',outMsgs,retMsgs)
 
     const abortSignalRef = useRef(null);
 
@@ -52,28 +53,21 @@ function ChatComponent(props) {
         setQuestion(val);
     }
 
-    const onmessage = useMemoizedFn(({message,msgId,conversationId})=>{
+    const onmessage = useMemoizedFn((message)=>{
+        console.log('message',message,retMsgs);
         if(typing){
-            const chatRetMsgs = cloneDeep(retMsgsRef.current)
+            const chatRetMsgs = cloneDeep(retMsgs)
             let typingMsg = chatRetMsgs.pop()
             if(typingMsg){
                 typingMsg = Object.assign({},typingMsg,{msg: typingMsg.msg + message})
                 chatRetMsgs.push(typingMsg)
                 setRetMsgs(chatRetMsgs)
+                return chatRetMsgs
             }
         }
         updateScroll()
+        return null
     })
-
-
-
-    const onopen = () => {
-        console.log('onopen');
-        setRetMsgs([...retMsgs,{ id: null, msg: '', timestamp: new Date().valueOf(),done:false }])
-    }
-
-    const onclose = () => {
-    }
     const onerror = useMemoizedFn(() => {
         Toast.show({
             icon: 'fail',
@@ -86,10 +80,10 @@ function ChatComponent(props) {
             newRetMsgs.pop()
             setRetMsgs(newRetMsgs)
         }
-
         setIsError(true)
+        setTyping(false)
     })
-    const directChat = useMemoizedFn(async function (e) {
+    const directChat = async function (e) {
         e.preventDefault();
         if (!question) {
             Toast.show({
@@ -106,54 +100,54 @@ function ChatComponent(props) {
         abortSignalRef.current = null
         setTyping(true);
         // 向云服务发起调用
-        try {
-            const callRes = await callBridge({
-                data: {
-                    message: question,
-                    parentMessageId: msgId,
-                    conversationId: convId,
-                },
-                onmessage,
-                onopen,
-                onclose,
-                onerror,
-                getSignal: (sig) => {
-                    abortSignalRef.current = sig
-                },
-                debug: props.debug
-            })
-            setIsError(false)
-            console.log('client stream result: ', abortSignalRef.current, callRes);
-            const {response,conversationId,messageId} = callRes
-            const cloneRetMsgs = cloneDeep(retMsgsRef.current)
-            const typingChart = cloneRetMsgs.pop()
-
-            typingChart.id = messageId
-            typingChart.msg = response
-            typingChart.done = true
-            retMsgsRef.current[retMsgsRef.current.length - 1].id = messageId
-            retMsgsRef.current[retMsgsRef.current.length - 1].msg = response
-            retMsgsRef.current[retMsgsRef.current.length - 1].done = true
-
-            cloneRetMsgs.push(typingChart)
-            setCache({
-                ...cache,
-                [conversationId]:{
-                    "chat-out-msgs": newOutMsgs,
-                    "chat-ret-msgs":cloneRetMsgs
+        callBridge({
+            data: {
+                message: question,
+                parentMessageId: msgId,
+                conversationId: convId,
+            },
+            getSignal: (sig) => {
+                abortSignalRef.current = sig
+            }
+        },{
+            next(msgs){
+                const open = msgs.filter(msg=>msg.type === 'open')
+                const complete = msgs.filter(msg=>msg.type === 'complete')
+                const message = msgs.filter(msg=>msg.type === 'message')
+                // const {type,message,msgId,conversationId} = data
+                if(open.length){
+                    setRetMsgs([...retMsgs,{ id: null, msg: '', timestamp: new Date().valueOf(),done:false }])
                 }
-            })
-            setMsgId(messageId)
-            setConvId(conversationId)
+                if(message.length){
+                    setTimeout(()=>{
+                        const chatRetMsgs = onmessage(
+                            message.map(item=>item.message).join('')
+                        )
+                        if(complete.length){
+                            setTimeout(()=>{
+                                const {msgId,conversationId} = complete[0]
+                                setMsgId(msgId)
+                                setConvId(conversationId)
 
-            setTyping(false);
-
-            return callRes;
-        } catch (error) {
-            console.error('call service error: ', error);
-            setTyping(false);
-        }
-    })
+                                chatRetMsgs[chatRetMsgs.length - 1].id = msgId
+                                setRetMsgs(chatRetMsgs)
+                                setCache({
+                                    ...cache,
+                                    [conversationId]:{
+                                        "chat-out-msgs": newOutMsgs,
+                                        "chat-ret-msgs": chatRetMsgs || retMsgs
+                                    }
+                                })
+                                setIsError(false)
+                                setTyping(false)
+                            },0)
+                        }
+                    },0)
+                }
+            },
+            error:onerror
+        })
+    }
 
     useEffect(() => {
         scrollToBottom()

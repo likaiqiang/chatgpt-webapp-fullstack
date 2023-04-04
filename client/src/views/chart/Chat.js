@@ -69,9 +69,9 @@ function ChatComponent(props) {
             }
         })
     })
-    const onmessage = useMemoizedFn(({message,msgId,conversationId})=>{
+    const onmessage = useMemoizedFn((message)=>{
         if(typing){
-            const chatRetMsgs = cloneDeep(retMsgsRef.current)
+            const chatRetMsgs = cloneDeep(retMsgs)
             let typingMsg = chatRetMsgs.pop()
             if(typingMsg){
                 typingMsg = Object.assign({},typingMsg,{msg: typingMsg.msg + message})
@@ -83,9 +83,11 @@ function ChatComponent(props) {
                         "chat-ret-msgs":chatRetMsgs
                     }
                 })
+                return chatRetMsgs
             }
             updateScroll()
         }
+        return null
     })
     const onerror = useMemoizedFn((message) => {
         Toast.show({
@@ -107,7 +109,7 @@ function ChatComponent(props) {
         }
         setIsError(true)
     })
-    const directChat = useMemoizedFn(async function (e) {
+    const directChat = async function (e) {
         e && e.preventDefault();
         if (!question) {
             Toast.show({
@@ -129,51 +131,57 @@ function ChatComponent(props) {
         abortSignalRef.current = null
         setTyping(true);
         // 向云服务发起调用
-        try {
-            const callRes = await callBridge({
-                data: {
-                    message: question,
-                    parentMessageId: msgId,
-                    conversationId: convId,
-                },
-                onmessage,
-                onopen,
-                onclose,
-                onerror,
-                getSignal: (sig) => {
-                    abortSignalRef.current = sig
-                },
-                debug: props.debug
-            })
-            setIsError(false)
-            setTyping(false);
-            const {response,conversationId,messageId} = callRes
-            const cloneRetMsgs = cloneDeep(retMsgsRef.current)
-            const typingChart = cloneRetMsgs.pop()
-
-            typingChart.id = messageId
-            typingChart.msg = response
-            typingChart.done = true
-            retMsgsRef.current[retMsgsRef.current.length - 1].id = messageId
-            retMsgsRef.current[retMsgsRef.current.length - 1].msg = response
-            retMsgsRef.current[retMsgsRef.current.length - 1].done = true
-
-            cloneRetMsgs.push(typingChart)
-            setCache({
-                ...cache,
-                [convId]:{
-                    "chat-out-msgs": newOutMsgs,
-                    "chat-ret-msgs":cloneRetMsgs
+        callBridge({
+            data: {
+                message: question,
+                parentMessageId: msgId,
+                conversationId: convId,
+            },
+            getSignal: (sig) => {
+                abortSignalRef.current = sig
+            }
+        },{
+            next(msgs){
+                const open = msgs.filter(msg=>msg.type === 'open')
+                const complete = msgs.filter(msg=>msg.type === 'complete')
+                const message = msgs.filter(msg=>msg.type === 'message')
+                if(open.length){
+                    setCache({
+                        ...cache,
+                        [convId]:{
+                            "chat-out-msgs": outMsgs,
+                            "chat-ret-msgs": [...retMsgs, { id: null, msg: '', timestamp: new Date().valueOf(),done:false }]
+                        }
+                    })
                 }
-            })
-            setMsgId(messageId)
-            return callRes;
-        } catch (error) {
-            console.error('call service error: ', error);
-
-            setTyping(false);
-        }
-    })
+                if(message.length){
+                    setTimeout(()=>{
+                        const chatRetMsgs = onmessage(
+                            message.map(item=>item.message).join('')
+                        )
+                        if(complete.length){
+                            setTimeout(()=>{
+                                const {msgId,conversationId} = complete[0]
+                                setMsgId(msgId)
+                                debugger
+                                chatRetMsgs[chatRetMsgs.length - 1].id = msgId
+                                setCache({
+                                    ...cache,
+                                    [conversationId]:{
+                                        "chat-out-msgs": newOutMsgs,
+                                        "chat-ret-msgs": chatRetMsgs || retMsgs
+                                    }
+                                })
+                                setIsError(false)
+                                setTyping(false)
+                            },0)
+                        }
+                    },0)
+                }
+            },
+            error:onerror
+        })
+    }
 
     useEffect(() => {
         scrollToBottom()

@@ -74,46 +74,40 @@ const Messages = (props) => {
                             </div>
                         </Whether>
                         <div className={`bubble`} key={ret.msg}>
-                            <Whether value={ret.done === true || ret.done === undefined}>
-                                <ReactMarkdown
-                                    children={ret.msg}
-                                    components={{
-                                        code({node, inline, className, children, ...props}) {
-                                            const match = /language-(\w+)/.exec(className || '')
-                                            const language = match ? match[1] : 'javascript'
-                                            return (
-                                                <Whether value={!inline}>
-                                                    <If>
-                                                        <div className='codebox-handler'>
-                                                            <span>{language}</span>
-                                                            <span>
-                                                                    <CopyBtn onClick={copyItem(String(children).replace(/\n$/, ''), '代码已复制到剪贴板')} />
-                                                                </span>
-                                                            <SyntaxHighlighter
-                                                                children={String(children)}
-                                                                style={vscDarkPlus}
-                                                                language={language}
-                                                                PreTag="div"
-                                                                {...props}
-                                                            />
-                                                        </div>
-                                                    </If>
-                                                    <Else>
-                                                        <code className={className} {...props}>
-                                                            {children}
-                                                        </code>
-                                                    </Else>
-                                                </Whether>
-                                            )
-                                        }
-                                    }}
-                                />
-                            </Whether>
-                            <Whether value={ret.done === false}>
-                                <Fragment>
-                                    {ret.msg}
-                                </Fragment>
-                            </Whether>
+                            <ReactMarkdown
+                                children={ret.msg}
+                                components={{
+                                    code({node, inline, className, children, ...props}) {
+                                        const match = /language-(\w+)/.exec(className || '')
+                                        const language = match ? match[1] : 'javascript'
+                                        return (
+                                            <Whether value={!inline}>
+                                                <If>
+                                                    <div className='codebox-handler'>
+                                                        <span>{language}</span>
+                                                        <span>
+                                                            <CopyBtn onClick={copyItem(String(children).replace(/\n$/, ''), '代码已复制到剪贴板')} />
+                                                        </span>
+                                                        <SyntaxHighlighter
+                                                            children={String(children)}
+                                                            style={vscDarkPlus}
+                                                            language={language}
+                                                            PreTag="div"
+                                                            {...props}
+                                                        />
+                                                    </div>
+                                                </If>
+                                                <Else>
+                                                    <code className={className} {...props}>
+                                                        {children}
+                                                    </code>
+                                                </Else>
+                                            </Whether>
+                                        )
+                                    }
+                                }}
+                            />
+
                             <Whether value={isError && ret.type === 'outgoing' && i === msgs.length - 1}>
                                 <div className='talking-item-btns'>
                                     <RedoOutline/>
