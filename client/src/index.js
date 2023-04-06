@@ -8,18 +8,30 @@ import {Modal} from "antd-mobile";
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
-window.addEventListener('beforeinstallprompt',e=>{
-    showInstallPrompt(e)
-})
+//REACT_APP_Chart_WEB_URL
 
-function showInstallPrompt(promptEvent){
-    Modal.confirm({
-        content:'是否添加到桌面',
-        onConfirm:()=>{
-            promptEvent.prompt()
+async function checkInstall(){
+    const webUrl = process.env.REACT_APP_Chart_WEB_URL
+    if(navigator.getInstalledRelatedApps){
+        const relatedApps = await navigator.getInstalledRelatedApps();
+        for(let i=0;i<relatedApps.length;i++){
+            if(relatedApps[i].url.includes(webUrl)) return true
         }
-    })
+    }
+    return false
 }
+
+window.addEventListener('beforeinstallprompt',async e=>{
+    const isInstall = await checkInstall()
+    if(!isInstall){
+        Modal.confirm({
+            content:'是否添加到桌面',
+            onConfirm:()=>{
+                e.prompt()
+            }
+        })
+    }
+})
 
 root.render(
     <App />

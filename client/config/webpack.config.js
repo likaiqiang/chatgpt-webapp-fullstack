@@ -702,7 +702,13 @@ module.exports = function (webpackEnv) {
             "scope": "./",
             "display": "standalone",
             "theme_color": "#000000",
-            "background_color": "#ffffff"
+            "background_color": "#ffffff",
+            "related_applications":[
+              {
+                "platform": "webapp",
+                "url": `${process.env.REACT_APP_Chart_WEB_URL}/manifest.json`
+              }
+            ]
           };
         },
       }),
