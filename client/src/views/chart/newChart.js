@@ -25,6 +25,7 @@ function ChatComponent(props) {
 
     const [outMsgs, setOutMsgs] = useState([])
     const [retMsgs, setRetMsgs] = useState([])
+    const retMsgsRef = useLatest(retMsgs)
 
     const [msgId, setMsgId] = useState('');
     const [convId, setConvId] = useState('');
@@ -56,17 +57,15 @@ function ChatComponent(props) {
     const onmessage = useMemoizedFn((message)=>{
         console.log('message',message,retMsgs);
         if(typing){
-            const chatRetMsgs = cloneDeep(retMsgs)
+            const chatRetMsgs = cloneDeep(retMsgsRef.current)
             let typingMsg = chatRetMsgs.pop()
             if(typingMsg){
                 typingMsg = Object.assign({},typingMsg,{msg: typingMsg.msg + message})
                 chatRetMsgs.push(typingMsg)
                 setRetMsgs(chatRetMsgs)
-                return chatRetMsgs
             }
         }
         updateScroll()
-        return null
     })
     const onerror = useMemoizedFn(() => {
         Toast.show({
@@ -120,7 +119,7 @@ function ChatComponent(props) {
                 }
                 if(message.length){
                     setTimeout(()=>{
-                        const chatRetMsgs = onmessage(
+                        onmessage(
                             message.map(item=>item.message).join('')
                         )
                         if(complete.length){
@@ -128,14 +127,14 @@ function ChatComponent(props) {
                                 const {msgId,conversationId} = complete[0]
                                 setMsgId(msgId)
                                 setConvId(conversationId)
-
+                                const chatRetMsgs = cloneDeep(retMsgsRef.current)
                                 chatRetMsgs[chatRetMsgs.length - 1].id = msgId
                                 setRetMsgs(chatRetMsgs)
                                 setCache({
                                     ...cache,
                                     [conversationId]:{
                                         "chat-out-msgs": newOutMsgs,
-                                        "chat-ret-msgs": chatRetMsgs || retMsgs
+                                        "chat-ret-msgs": chatRetMsgs
                                     }
                                 })
                                 setIsError(false)

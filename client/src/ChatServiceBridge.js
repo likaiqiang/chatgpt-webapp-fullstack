@@ -72,6 +72,7 @@ export const callBridge = (options,{next=()=>{},error=()=>{},complete=()=>{}}) =
     })
     sub = source.pipe(bufferCount(10)).subscribe({
         next,
-        error
+        error,
+        complete
     })
 }
