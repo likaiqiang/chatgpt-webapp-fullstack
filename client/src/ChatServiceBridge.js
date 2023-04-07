@@ -1,11 +1,19 @@
 // Run the server first with `npm run server`
-import { fetchEventSource } from '@fortaine/fetch-event-source';
-import { bufferCount } from 'rxjs/operators';
+import {fetchEventSource} from '@fortaine/fetch-event-source';
+import {bufferCount} from 'rxjs/operators';
 import {Observable} from 'rxjs'
-import { HOST_URL } from './config'
+import {HOST_URL} from './config'
 
-export const callBridge = (options,{next=()=>{},error=()=>{},complete=()=>{}}) => {
-    const { data, getSignal,cb = ()=>{} } = options || {}
+export const callBridge = (options, {
+    next = () => {
+    }, error = () => {
+    }, complete = () => {
+    }
+}) => {
+    const {
+        data, getSignal, cb = () => {
+        }
+    } = options || {}
     if (!data?.message) {
         throw new Error('Empty Input Message');
     }
@@ -25,52 +33,52 @@ export const callBridge = (options,{next=()=>{},error=()=>{},complete=()=>{}}) =
     if (getSignal) {
         getSignal(controller);
     }
-    let msgId = '',conversationId = '',reply=''
-    let sub = null
-    let source = new Observable(obsrver=>{
-        fetchEventSource(`${HOST_URL}/api/chat`,{
+    let msgId = '', conversationId = '', reply = '', sub = null
+
+    let source = new Observable(obsrver => {
+        const promise = fetchEventSource(`${HOST_URL}/api/chat`, {
             ...opts,
             signal: controller.signal,
-            onopen(){
+            onopen() {
                 obsrver.next({
-                    type:'open'
+                    type: 'open'
                 })
             },
-            onmessage(message){
-                if (message.data === '[DONE]'){
-                    obsrver.next({
-                        type:'complete',
-                        msgId,
-                        conversationId,
-                        reply
-                    })
-                    obsrver.complete()
-                    controller.abort();
+            onmessage(message) {
+                if (message.data === '[DONE]') {
 
-                }
-                else {
+                } else {
                     const msg = JSON.parse(message.data)
-                    if(typeof msg === 'string'){
+                    if (typeof msg === 'string') {
                         obsrver.next({
-                            type:'message',
+                            type: 'message',
                             message: msg,
                         })
-                    }
-                    else {
+                    } else {
                         msgId = msg.messageId || ''
                         conversationId = msg.conversationId || ''
                         reply = msg.response
                     }
                 }
             },
-            onerror:obsrver.error,
-            onclose:()=>{
-                sub.unsubscribe()
-                source = null
+            onerror: obsrver.error,
+            onclose: () => {
+
             }
         })
+        promise.then(()=>{
+            console.log('promise complete')
+            obsrver.next({
+                type: 'complete',
+                msgId,
+                conversationId,
+                reply
+            })
+            obsrver.complete()
+            controller.abort();
+        })
     })
-    sub = source.pipe(bufferCount(10)).subscribe({
+    source.pipe(bufferCount(10)).subscribe({
         next,
         error,
         complete

@@ -87,6 +87,21 @@ function ChatComponent(props) {
             updateScroll()
         }
     })
+    const oncomplete = ({complete,newOutMsgs})=>{
+        const {msgId,conversationId} = complete[0]
+        setMsgId(msgId)
+        const chatRetMsgs = cloneDeep(retMsgsRef.current)
+        chatRetMsgs[chatRetMsgs.length - 1].id = msgId
+        setCache({
+            ...cache,
+            [conversationId]:{
+                "chat-out-msgs": newOutMsgs,
+                "chat-ret-msgs": chatRetMsgs
+            }
+        })
+        setIsError(false)
+        setTyping(false)
+    }
     const onerror = useMemoizedFn((message) => {
         Toast.show({
             icon: 'fail',
@@ -152,29 +167,31 @@ function ChatComponent(props) {
                         }
                     })
                 }
-                if(message.length){
+                if(message.length && complete.length){
                     setTimeout(()=>{
                         onmessage(
                             message.map(item=>item.message).join('')
                         )
                         if(complete.length){
                             setTimeout(()=>{
-                                const {msgId,conversationId} = complete[0]
-                                setMsgId(msgId)
-                                const chatRetMsgs = cloneDeep(retMsgsRef.current)
-                                chatRetMsgs[chatRetMsgs.length - 1].id = msgId
-                                setCache({
-                                    ...cache,
-                                    [conversationId]:{
-                                        "chat-out-msgs": newOutMsgs,
-                                        "chat-ret-msgs": chatRetMsgs
-                                    }
-                                })
-                                setIsError(false)
-                                setTyping(false)
+                                oncomplete({complete,newOutMsgs})
                             },0)
                         }
                     },0)
+                }
+                else{
+                    if(message.length && !complete.length){
+                        setTimeout(()=>{
+                            onmessage(
+                                message.map(item=>item.message).join('')
+                            )
+                        },0)
+                    }
+                    if(!message.length && complete.length){
+                        setTimeout(()=>{
+                            oncomplete({complete,newOutMsgs})
+                        },0)
+                    }
                 }
             },
             error:onerror
