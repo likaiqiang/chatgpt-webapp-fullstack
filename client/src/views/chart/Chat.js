@@ -22,6 +22,7 @@ function ChatComponent(props) {
     const outMsgs = cache[convId]['chat-out-msgs'] || []
     const retMsgs = cache[convId]['chat-ret-msgs'] || []
     const retMsgsRef = useLatest(retMsgs)
+    const outMsgsRef = useLatest(outMsgs)
 
     // const [outMsgs, setOutMsgs] = useLocalStorage('chat-out-msgs', []);
     // // 人的提问
@@ -87,7 +88,7 @@ function ChatComponent(props) {
             updateScroll()
         }
     })
-    const oncomplete = ({complete,newOutMsgs})=>{
+    const oncomplete = ({complete})=>{
         const {msgId,conversationId} = complete[0]
         setMsgId(msgId)
         const chatRetMsgs = cloneDeep(retMsgsRef.current)
@@ -95,7 +96,7 @@ function ChatComponent(props) {
         setCache({
             ...cache,
             [conversationId]:{
-                "chat-out-msgs": newOutMsgs,
+                "chat-out-msgs": outMsgsRef.current,
                 "chat-ret-msgs": chatRetMsgs
             }
         })
@@ -133,7 +134,7 @@ function ChatComponent(props) {
         setQuestion('');
         setIsError(false)
 
-        const newOutMsgs = [...outMsgs, { id: genRandomMsgId(), msg: question, timestamp: new Date().valueOf() }]
+        const newOutMsgs = [...outMsgsRef.current, { id: genRandomMsgId(), msg: question, timestamp: new Date().valueOf() }]
         setCache({
             ...cache,
             [convId]: {
@@ -174,7 +175,7 @@ function ChatComponent(props) {
                         )
                         if(complete.length){
                             setTimeout(()=>{
-                                oncomplete({complete,newOutMsgs})
+                                oncomplete({complete})
                             },0)
                         }
                     },0)
@@ -189,7 +190,7 @@ function ChatComponent(props) {
                     }
                     if(!message.length && complete.length){
                         setTimeout(()=>{
-                            oncomplete({complete,newOutMsgs})
+                            oncomplete({complete})
                         },0)
                     }
                 }

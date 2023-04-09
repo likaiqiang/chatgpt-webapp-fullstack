@@ -66,7 +66,9 @@ export const callBridge = (options, {
 
             }
         })
-        promise.then(()=>{
+        promise.catch(error=>{
+            console.log('error',error);
+        }).finally(()=>{
             console.log('promise complete')
             obsrver.next({
                 type: 'complete',
@@ -78,7 +80,7 @@ export const callBridge = (options, {
             controller.abort();
         })
     })
-    source.pipe(bufferCount(10)).subscribe({
+    source.pipe(bufferCount(5)).subscribe({
         next,
         error,
         complete

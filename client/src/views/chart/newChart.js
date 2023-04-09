@@ -26,6 +26,7 @@ function ChatComponent(props) {
     const [outMsgs, setOutMsgs] = useState([])
     const [retMsgs, setRetMsgs] = useState([])
     const retMsgsRef = useLatest(retMsgs)
+    const outMsgsRef = useLatest(outMsgs)
 
     const [msgId, setMsgId] = useState('');
     const [convId, setConvId] = useState('');
@@ -82,7 +83,7 @@ function ChatComponent(props) {
         setIsError(true)
         setTyping(false)
     })
-    const oncomplete = ({complete,newOutMsgs})=>{
+    const oncomplete = ({complete})=>{
         const {msgId,conversationId} = complete[0]
         setMsgId(msgId)
         setConvId(conversationId)
@@ -92,7 +93,7 @@ function ChatComponent(props) {
         setCache({
             ...cache,
             [conversationId]:{
-                "chat-out-msgs": newOutMsgs,
+                "chat-out-msgs": outMsgsRef.current,
                 "chat-ret-msgs": chatRetMsgs
             }
         })
@@ -110,7 +111,7 @@ function ChatComponent(props) {
 
         setQuestion('');
         setIsError(false)
-        const newOutMsgs = [...outMsgs, {id: genRandomMsgId(), msg: question, timestamp: new Date().valueOf()}]
+        const newOutMsgs = [...outMsgsRef.current, {id: genRandomMsgId(), msg: question, timestamp: new Date().valueOf()}]
         setOutMsgs(newOutMsgs)
 
         abortSignalRef.current = null
@@ -142,7 +143,7 @@ function ChatComponent(props) {
                         )
                         if(complete.length){
                             setTimeout(()=>{
-                                oncomplete({complete,newOutMsgs})
+                                oncomplete({complete})
                             },0)
                         }
                     },0)
@@ -157,7 +158,7 @@ function ChatComponent(props) {
                     }
                     if(!message.length && complete.length){
                         setTimeout(()=>{
-                            oncomplete({complete,newOutMsgs})
+                            oncomplete({complete})
                         },0)
                     }
                 }
