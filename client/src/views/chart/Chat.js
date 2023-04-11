@@ -80,7 +80,7 @@ function ChatComponent(props) {
                 setCache({
                     ...cache,
                     [convId]:{
-                        "chat-out-msgs": outMsgs,
+                        "chat-out-msgs": outMsgsRef.current,
                         "chat-ret-msgs":chatRetMsgs
                     }
                 })
@@ -134,7 +134,7 @@ function ChatComponent(props) {
         setQuestion('');
         setIsError(false)
 
-        const newOutMsgs = [...outMsgsRef.current, { id: genRandomMsgId(), msg: question, timestamp: new Date().valueOf() }]
+        const newOutMsgs = [...outMsgs, { id: genRandomMsgId(), msg: question, timestamp: new Date().valueOf() }]
         setCache({
             ...cache,
             [convId]: {
@@ -163,8 +163,8 @@ function ChatComponent(props) {
                     setCache({
                         ...cache,
                         [convId]:{
-                            "chat-out-msgs": outMsgs,
-                            "chat-ret-msgs": [...retMsgs, { id: null, msg: '', timestamp: new Date().valueOf(),done:false }]
+                            "chat-out-msgs": outMsgsRef.current,
+                            "chat-ret-msgs": [...retMsgsRef.current, { id: null, msg: '', timestamp: new Date().valueOf(),done:false }]
                         }
                     })
                 }

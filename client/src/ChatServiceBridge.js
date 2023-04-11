@@ -1,6 +1,6 @@
 // Run the server first with `npm run server`
 import {fetchEventSource} from '@fortaine/fetch-event-source';
-import {bufferCount} from 'rxjs/operators';
+import {bufferCount, bufferTime} from 'rxjs/operators';
 import {Observable} from 'rxjs'
 import {HOST_URL} from './config'
 
@@ -80,7 +80,7 @@ export const callBridge = (options, {
             controller.abort();
         })
     })
-    source.pipe(bufferCount(5)).subscribe({
+    source.pipe(bufferTime(300)).subscribe({
         next,
         error,
         complete

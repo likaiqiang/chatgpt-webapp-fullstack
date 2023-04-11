@@ -111,7 +111,7 @@ function ChatComponent(props) {
 
         setQuestion('');
         setIsError(false)
-        const newOutMsgs = [...outMsgsRef.current, {id: genRandomMsgId(), msg: question, timestamp: new Date().valueOf()}]
+        const newOutMsgs = [...outMsgs, {id: genRandomMsgId(), msg: question, timestamp: new Date().valueOf()}]
         setOutMsgs(newOutMsgs)
 
         abortSignalRef.current = null
@@ -133,7 +133,7 @@ function ChatComponent(props) {
                 const message = msgs.filter(msg=>msg.type === 'message')
                 // const {type,message,msgId,conversationId} = data
                 if(open.length){
-                    setRetMsgs([...retMsgs,{ id: null, msg: '', timestamp: new Date().valueOf(),done:false }])
+                    setRetMsgs([...retMsgsRef.current,{ id: null, msg: '', timestamp: new Date().valueOf(),done:false }])
                 }
 
                 if(message.length && complete.length){
