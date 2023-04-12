@@ -1,6 +1,11 @@
 import {TextArea} from "antd-mobile";
 import React, {useEffect, useRef} from "react";
 
+function isAndroid() {
+    let userAgent = navigator.userAgent.toLowerCase();
+    return userAgent.indexOf("android") > -1;
+}
+
 const CustomTextArea = (props) => {
     const {antdProps = {},onKeyDown = ()=>{},onKeyUp=()=>{}} = props
     const ref = useRef()
@@ -20,7 +25,13 @@ const CustomTextArea = (props) => {
     //     }
     // },[antdProps.value])
     return (
-        <TextArea ref={ref} {...antdProps}/>
+        <TextArea ref={ref} onFocus={()=>{
+            if(!isAndroid()) return
+            setTimeout(()=>{
+                const {nativeElement} = ref.current
+                nativeElement.scrollIntoView()
+            },300)
+        }} {...antdProps}/>
     )
 }
 export default CustomTextArea

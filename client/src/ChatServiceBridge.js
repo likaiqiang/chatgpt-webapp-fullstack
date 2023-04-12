@@ -35,7 +35,7 @@ export const callBridge = (options, {
     }
     let msgId = '', conversationId = '', reply = '', sub = null
 
-    let source = new Observable(obsrver => {
+    new Observable(obsrver => {
         const promise = fetchEventSource(`${HOST_URL}/api/chat`, {
             ...opts,
             signal: controller.signal,
@@ -46,7 +46,7 @@ export const callBridge = (options, {
             },
             onmessage(message) {
                 if (message.data === '[DONE]') {
-
+                    controller.abort()
                 } else {
                     const msg = JSON.parse(message.data)
                     if (typeof msg === 'string') {
@@ -61,9 +61,11 @@ export const callBridge = (options, {
                     }
                 }
             },
-            onerror: obsrver.error,
-            onclose: () => {
-
+            onerror(){
+                obsrver.error(...arguments)
+            },
+            onclose(){
+                console.log('close')
             }
         })
         promise.catch(error=>{
@@ -79,8 +81,7 @@ export const callBridge = (options, {
             obsrver.complete()
             controller.abort();
         })
-    })
-    source.pipe(bufferTime(300)).subscribe({
+    }).pipe(bufferTime(300)).subscribe({
         next,
         error,
         complete

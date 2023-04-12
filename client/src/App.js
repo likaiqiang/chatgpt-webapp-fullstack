@@ -4,7 +4,7 @@ import Chat from './views/chart/Chat';
 import NewChart from "./views/chart/newChart";
 import List from './views/list'
 import {useLocalStorage} from "./utils";
-import {useMemo, useState} from "react";
+import {useEffect, useMemo, useState} from "react";
 import Context from "./context";
 
 function App() {
@@ -13,6 +13,7 @@ function App() {
     const charts = useMemo(()=>{
         return Object.keys(cache).map(key=>cache[key])
     },[cache])
+    
     return (
         <div className="App">
             <Context.Provider value={{
