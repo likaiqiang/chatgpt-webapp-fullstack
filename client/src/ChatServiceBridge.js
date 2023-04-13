@@ -1,19 +1,11 @@
 // Run the server first with `npm run server`
 import {fetchEventSource} from '@fortaine/fetch-event-source';
-import {bufferCount, bufferTime} from 'rxjs/operators';
+import {bufferTime, share} from 'rxjs/operators';
 import {Observable} from 'rxjs'
 import {HOST_URL} from './config'
 
-export const callBridge = (options, {
-    next = () => {
-    }, error = () => {
-    }, complete = () => {
-    }
-}) => {
-    const {
-        data, getSignal, cb = () => {
-        }
-    } = options || {}
+function createSharedObservable(options){
+    const {data,getSignal} = options
     if (!data?.message) {
         throw new Error('Empty Input Message');
     }
@@ -28,14 +20,12 @@ export const callBridge = (options, {
             stream: true,
         }),
     };
-
     const controller = new AbortController();
     if (getSignal) {
         getSignal(controller);
     }
-    let msgId = '', conversationId = '', reply = '', sub = null
-
-    new Observable(obsrver => {
+    let msgId = '', conversationId = '', reply = ''
+    return new Observable(obsrver=>{
         const promise = fetchEventSource(`${HOST_URL}/api/chat`, {
             ...opts,
             signal: controller.signal,
@@ -43,6 +33,7 @@ export const callBridge = (options, {
                 obsrver.next({
                     type: 'open'
                 })
+                msgId = '';conversationId='';reply=''
             },
             onmessage(message) {
                 if (message.data === '[DONE]') {
@@ -81,7 +72,20 @@ export const callBridge = (options, {
             obsrver.complete()
             controller.abort();
         })
-    }).pipe(bufferTime(300)).subscribe({
+    }).pipe(
+        bufferTime(300),
+        share()
+    )
+}
+
+export const callBridge = (options, {
+    next = () => {
+    }, error = () => {
+    }, complete = () => {
+    }
+}) => {
+    const sharedObservable = createSharedObservable(options);
+    sharedObservable.subscribe({
         next,
         error,
         complete
