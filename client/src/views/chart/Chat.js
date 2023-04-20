@@ -245,13 +245,12 @@ function ChatComponent(props) {
                 </div>
                 <div style={{fontSize:'2em'}}>
                     <DownlandOutline onClick={()=>{
-                        debugger
                         exportData({
                             retMsgs,
                             outMsgs,
                             cache,
                             convId,
-                            screenshotsRef: messageRef.current.messagesContainer
+                            screenshotsRef: messageRef.current.messagesContainerRef.current
                         })
                     }}/>
                 </div>

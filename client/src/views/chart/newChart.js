@@ -214,7 +214,7 @@ function ChatComponent(props) {
                             outMsgs,
                             cache,
                             convId,
-                            screenshotsRef: messageRef.current.messagesContainer
+                            screenshotsRef: messageRef.current.messagesContainerRef.current
                         })
                     }}/>
                 </div>
