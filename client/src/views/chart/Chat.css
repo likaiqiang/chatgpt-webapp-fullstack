@@ -185,9 +185,11 @@
     max-width: inherit;
 }
 .chat-container {
+    padding: 12px;
+}
+.chat-container >div{
     display: flex;
     flex-direction: column;
-    padding: 12px;
     --align-items: center;
     max-width: inherit;
 }
