@@ -1,5 +1,6 @@
 import Context from "../../context";
 import {useContext, useEffect, useMemo, useRef, useState} from "react";
+import ReactDOM from "react-dom";
 import DataFor from "../../components/DataFor";
 import './list.css'
 import {useNavigate,useLocation} from "react-router-dom";
@@ -67,7 +68,12 @@ const List = ()=>{
                     开始一个新问题
                 </Button>
             </Whether>
-            <CustomPopper ref={popperRef}/>
+            {
+                ReactDOM.createPortal(
+                    <CustomPopper ref={popperRef}/>,
+                    document.body
+                )
+            }
         </div>
     )
 }
