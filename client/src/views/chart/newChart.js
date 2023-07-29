@@ -246,7 +246,7 @@ function ChatComponent(props) {
                         value: question,
                         onChange: inputQuestion,
                         rows: 1,
-                        maxLength: 3000,
+                        maxLength: 30000,
                         autoSize: {minRows: 1, maxRows: 20},
                         showCount: true,
                         autoFocus: true

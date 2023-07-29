@@ -17,6 +17,13 @@
 .listContainer .listCard .adm-card-header-title{
     flex: 1;
 }
+.listContainer .listCard .adm-card-header-title >div {
+    overflow : hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
 .listContainer .main{
     flex:1;
     height: 0;

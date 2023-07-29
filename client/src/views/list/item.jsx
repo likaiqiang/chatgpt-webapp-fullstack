@@ -156,6 +156,7 @@ const Item = (props) => {
             }}
             style={{marginBottom:'20px'}}
             onContextMenu={onContextMenu}
+            title={data.title}
         >
             <Card
                 title={

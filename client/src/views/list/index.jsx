@@ -11,7 +11,7 @@ import CustomPopper from "../../components/Popper";
 const List = ()=>{
     const {cache,listActive,changeListActive} = useContext(Context)
     const navigate = useNavigate()
-    const charts = useMemo(()=>{
+    const chats = useMemo(()=>{
         return Object.keys(cache).map(key=>{
             const title = cache[key]['chat-out-msgs'][0].title || cache[key]['chat-out-msgs'][0].msg
             return {
@@ -28,9 +28,9 @@ const List = ()=>{
     return (
         <div className={'listContainer'}>
             <div className="main">
-                <Whether value={charts.length}>
+                <Whether value={chats.length}>
                     <If>
-                        <DataFor list={charts} rowKey={item=>item.convId}>
+                        <DataFor list={chats} rowKey={item=>item.convId}>
                             {
                                 (item,i)=>{
                                     return (
@@ -61,7 +61,7 @@ const List = ()=>{
                     </Else>
                 </Whether>
             </div>
-            <Whether value={charts.length}>
+            <Whether value={chats.length}>
                 <Button color='primary' block onClick={()=>{
                     navigate('/new')
                 }}>
