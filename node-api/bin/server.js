@@ -5,36 +5,21 @@ import cors from '@fastify/cors';
 import fastifyStatic from '@fastify/static';
 import { FastifySSEPlugin } from '@waylaidwanderer/fastify-sse-v2';
 import fs from 'fs';
-import { pathToFileURL } from 'url';
 import { KeyvFile } from 'keyv-file';
 import ChatGPTClient from '../src/ChatGPTClient.js';
 import ChatGPTBrowserClient from '../src/ChatGPTBrowserClient.js';
 import BingAIClient from '../src/BingAIClient.js';
-// import { ProxyAgent } from 'undici';
+import path,{dirname} from 'path'
+import {fileURLToPath, pathToFileURL} from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const BillingURL = 'https://api.openai.com/dashboard/billing/credit_grants';
 
-const arg = process.argv.find((arg) => arg.startsWith('--settings'));
-let settingPath;
-if (arg) {
-    settingPath = arg.split('=')[1];
-} else {
-    settingPath = './settings.js';
-}
-
-let settings;
-if (fs.existsSync(settingPath)) {
-    // get the full settingPath
-    const fullPath = fs.realpathSync(settingPath);
-    settings = (await import(pathToFileURL(fullPath).toString())).default;
-} else {
-    if (arg) {
-        console.error('Error: the file specified by the --settings parameter does not exist.');
-    } else {
-        console.error('Error: the settings.js file does not exist.');
-    }
-    process.exit(1);
-}
+const settings = (await import(pathToFileURL(
+    path.join(__dirname,'../settings.js')
+).toString())).default;
 
 if (settings.storageFilePath && !settings.cacheOptions.store) {
     // make the directory and file if they don't exist
@@ -186,6 +171,7 @@ server.post('/api/chat', async (request, reply) => {
             conversationSignature: body.conversationSignature,
             clientId: body.clientId,
             invocationId: body.invocationId,
+            userId: body.userId,
             clientOptions,
             onProgress,
             abortController,

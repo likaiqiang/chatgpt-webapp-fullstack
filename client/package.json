@@ -5,6 +5,7 @@
   "homepage": "https://chat.webinfra.cloud/build",
   "dependencies": {
     "@babel/core": "^7.16.0",
+    "@fingerprintjs/fingerprintjs": "^4.1.0",
     "@fortaine/fetch-event-source": "^3.0.6",
     "@pmmmwh/react-refresh-webpack-plugin": "^0.5.3",
     "@popperjs/core": "^2.11.7",

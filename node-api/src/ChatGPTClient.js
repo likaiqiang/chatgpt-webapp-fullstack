@@ -4,9 +4,18 @@ import Keyv from 'keyv';
 import { encoding_for_model as encodingForModel, get_encoding as getEncoding } from '@dqbd/tiktoken';
 import { fetchEventSource } from '@waylaidwanderer/fetch-event-source';
 import { Agent, ProxyAgent } from 'undici';
+import HttpsProxyAgent from 'https-proxy-agent';
+import fetch from 'node-fetch';
+import KeyvMongoDB from "./keyv-mongodb.js";
 
 
 const tokenizersCache = {};
+
+const client = new KeyvMongoDB()
+
+const fetchWithProxy = (url, options) => {
+    return fetch(url, { ...options, agent: new HttpsProxyAgent('http://127.0.0.1:7890')});
+}
 
 export default class ChatGPTClient {
     constructor(
@@ -17,7 +26,7 @@ export default class ChatGPTClient {
         this.apiKey = apiKey;
 
         cacheOptions.namespace = cacheOptions.namespace || 'chatgpt';
-        this.conversationsCache = new Keyv(cacheOptions);
+        this.conversationsCache = client
 
         this.setOptions(options);
     }
@@ -175,6 +184,7 @@ export default class ChatGPTClient {
                     await fetchEventSource(url, {
                         ...opts,
                         signal: abortController.signal,
+                        fetch: fetchWithProxy,
                         async onopen(response) {
                             if (response.status === 200) {
                                 return;
@@ -264,8 +274,10 @@ export default class ChatGPTClient {
 
         const conversationId = opts.conversationId || crypto.randomUUID();
         const parentMessageId = opts.parentMessageId || crypto.randomUUID();
+        const userId = opts.userId
+        const key = `${userId},${conversationId}`
 
-        let conversation = await this.conversationsCache.get(conversationId);
+        let conversation = await this.conversationsCache.get(key);
         if (!conversation) {
             conversation = {
                 messages: [],
@@ -346,7 +358,7 @@ export default class ChatGPTClient {
         };
         conversation.messages.push(replyMessage);
 
-        await this.conversationsCache.set(conversationId, conversation);
+        await this.conversationsCache.set(key, conversation);
 
         return {
             response: replyMessage.message,

@@ -94,4 +94,9 @@ export default {
         // (Optional) Set to "bing" to use `BingAIClient` instead of `ChatGPTClient`.
         // clientToUse: 'bing',
     },
+    mongodb:{
+        user: process.env.MongoDB_username,
+        password: process.env.MongoDB_pw,
+        url: process.env.MongoDB_url
+    }
 };

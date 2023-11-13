@@ -3,6 +3,13 @@ import {fetchEventSource} from '@fortaine/fetch-event-source';
 import {bufferTime, share} from 'rxjs/operators';
 import {Observable} from 'rxjs'
 import {HOST_URL} from './config'
+import FingerprintJS from "@fingerprintjs/fingerprintjs";
+
+export async function getFingerprint() {
+    const fp = await FingerprintJS.load();
+    const result = await fp.get();
+    return result.visitorId;
+}
 
 const createObservable = ()=>{
     let options = {}
@@ -20,6 +27,7 @@ const createObservable = ()=>{
                 },
                 body: JSON.stringify({
                     ...(data || {}),
+
                     // Set stream to true to receive each token as it is generated.
                     stream: true,
                 }),

@@ -3,7 +3,7 @@ import {Toast, Button, Modal, SafeArea, NoticeBar} from 'antd-mobile'
 import {PlayOutline, HeartOutline, LeftOutline, AntOutline, DownlandOutline} from 'antd-mobile-icons'
 import {useLocation, useNavigate} from 'react-router-dom'
 import Whether, {If, Else} from "../../components/Whether";
-import {callBridge} from '../../ChatServiceBridge';
+import {callBridge, getFingerprint} from '../../ChatServiceBridge';
 import Messages from './Messages';
 import './Chat.css';
 import Context from "../../context";
@@ -122,6 +122,7 @@ function ChatComponent(props) {
                 message: question,
                 parentMessageId: msgId,
                 conversationId: convId,
+                userId: await getFingerprint()
             },
             getSignal: (sig) => {
                 abortSignalRef.current = sig

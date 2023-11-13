@@ -1225,6 +1225,13 @@
   resolved "https://registry.npmjs.org/@eslint/js/-/js-8.36.0.tgz#9837f768c03a1e4a30bd304a64fb8844f0e72efe"
   integrity sha512-lxJ9R5ygVm8ZWgYdUweoq5ownDlJ4upvoWmO4eLxBYHdMo+vZ/Rx0EN6MbKWDJOSUGrqJy2Gt+Dyv/VKml0fjg==
 
+"@fingerprintjs/fingerprintjs@^4.1.0":
+  version "4.1.0"
+  resolved "https://registry.npmjs.org/@fingerprintjs/fingerprintjs/-/fingerprintjs-4.1.0.tgz#82917f6c0afd59dbe05a4b386682b96cff4f7df0"
+  integrity sha512-a7RMbIgLEnchrL8TUbYNrsZuRAjN1iha32QXmwYheeLrFSpJW5IgDvuoBnT6R+5LJlZOKOpEU3nXIu3OeQsAlw==
+  dependencies:
+    tslib "^2.4.1"
+
 "@floating-ui/core@^1.2.3":
   version "1.2.4"
   resolved "https://registry.npmjs.org/@floating-ui/core/-/core-1.2.4.tgz#89e6311b021190c9e121fcf20306e76ac66e4066"
