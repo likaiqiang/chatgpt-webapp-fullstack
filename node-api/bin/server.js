@@ -21,18 +21,18 @@ const settings = (await import(pathToFileURL(
     path.join(__dirname,'../settings.js')
 ).toString())).default;
 
-if (settings.storageFilePath && !settings.cacheOptions.store) {
-    // make the directory and file if they don't exist
-    const dir = settings.storageFilePath.split('/').slice(0, -1).join('/');
-    if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-    }
-    if (!fs.existsSync(settings.storageFilePath)) {
-        fs.writeFileSync(settings.storageFilePath, '');
-    }
-
-    settings.cacheOptions.store = new KeyvFile({ filename: settings.storageFilePath });
-}
+// if (settings.storageFilePath && !settings.cacheOptions.store) {
+//     // make the directory and file if they don't exist
+//     const dir = settings.storageFilePath.split('/').slice(0, -1).join('/');
+//     if (!fs.existsSync(dir)) {
+//         fs.mkdirSync(dir, { recursive: true });
+//     }
+//     if (!fs.existsSync(settings.storageFilePath)) {
+//         fs.writeFileSync(settings.storageFilePath, '');
+//     }
+//
+//     settings.cacheOptions.store = new KeyvFile({ filename: settings.storageFilePath });
+// }
 
 const clientToUse = settings.apiOptions?.clientToUse || settings.clientToUse || 'chatgpt';
 
