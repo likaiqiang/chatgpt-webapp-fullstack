@@ -8,10 +8,8 @@ import {Modal} from "antd-mobile";
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
-//REACT_APP_Chart_WEB_URL
-
 async function checkInstall(){
-    const webUrl = process.env.REACT_APP_Chart_WEB_URL
+    const webUrl = process.env.REACT_APP_CHAT_URL
     if(navigator.getInstalledRelatedApps){
         const relatedApps = await navigator.getInstalledRelatedApps();
         for(let i=0;i<relatedApps.length;i++){

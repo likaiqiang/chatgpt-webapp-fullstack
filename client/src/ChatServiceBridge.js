@@ -24,6 +24,7 @@ const createObservable = ()=>{
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': localStorage.getItem('custom-key'),
                 },
                 body: JSON.stringify({
                     ...(data || {}),

@@ -86,7 +86,7 @@ function getClientEnvironment(publicUrl) {
         WDS_SOCKET_PATH: process.env.WDS_SOCKET_PATH,
         WDS_SOCKET_PORT: process.env.WDS_SOCKET_PORT,
         REACT_APP_BASE_URL: process.env.REACT_APP_Chart_URL,
-        REACT_APP_Chart_WEB_URL: process.env.REACT_APP_Chart_WEB_URL,
+        REACT_APP_CHAT_URL: process.env.REACT_APP_CHAT_URL,
         // Whether or not react-refresh is enabled.
         // It is defined here so it is available in the webpackHotDevClient.
         FAST_REFRESH: process.env.FAST_REFRESH !== 'false',

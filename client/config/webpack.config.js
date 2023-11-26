@@ -706,7 +706,7 @@ module.exports = function (webpackEnv) {
             "related_applications":[
               {
                 "platform": "webapp",
-                "url": `${process.env.REACT_APP_Chart_WEB_URL}/manifest.json`
+                "url": `${process.env.REACT_APP_CHAT_URL}/manifest.json`
               }
             ]
           };

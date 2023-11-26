@@ -1,1 +1,1 @@
-export const HOST_URL = process.env.REACT_APP_BASE_URL;
+export const HOST_URL = process.env.REACT_APP_CHAT_URL;
