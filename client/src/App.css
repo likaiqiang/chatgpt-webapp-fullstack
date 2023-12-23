@@ -55,3 +55,6 @@
   padding: 14px 20px 14px 0;
   border-top: solid 1px var(--border-color);
 }
+.adm-dropdown{
+  background-color: transparent;
+}

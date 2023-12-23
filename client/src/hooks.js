@@ -1,5 +1,6 @@
-import {useState} from "react";
+import {useContext, useState} from "react";
 import {useThrottleEffect} from "ahooks";
+import Context from "./context";
 
 export function useInput(initialValue) {
     const [value, setValue] = useState(initialValue);
@@ -27,5 +28,23 @@ export const useScrollToBottom = (cb = ()=>{})=>{
         update:()=>{
             setSign(sign + 1)
         }
+    }
+}
+export const useModels = ()=>{
+    const {models,selectModel,setSelectModel} = useContext(Context)
+    const [visible, setVisible] = useState(false)
+
+    const actions = models.map(model=>{
+        return {
+            text: model,
+            key: model
+        }
+    })
+    return {
+        models: actions,
+        visible,
+        setVisible,
+        selectModel,
+        setSelectModel
     }
 }

@@ -56,7 +56,20 @@ server.get('/', async (req, res) => {
     res.send('ok');
 });
 
-
+server.get('/api/get_models', async (request, reply)=>{
+    const configApiKey = getConfigApiKey()
+    try{
+        const resp = await fetch('https://api.openai.com/v1/models',{
+            headers:{
+                'Authorization': `Bearer ${configApiKey}`
+            }
+        }).then(res=>res.json())
+        reply.send(resp)
+        //reply.code(400).send('Auth Failed');
+    } catch (e){
+        reply.code(500).send(e.toString());
+    }
+})
 server.post('/api/usage', async (request, reply) => {
     const { hash } = request.body || {};
     if (hash !== 'magic-master') {
@@ -159,7 +172,7 @@ server.post('/api/chat', async (request, reply) => {
             delete clientOptions.clientToUse;
         }
 
-        const messageClient = getClient(clientToUseForMessage);
+        const messageClient = getClient(clientToUseForMessage, body.model || 'gpt4-1106-preview');
         let targetClient = messageClient;
         if (Array.isArray(messageClient)) {
             targetClient = messageClient[Math.floor(Math.random() * messageClient.length)];
@@ -235,7 +248,19 @@ function nextTick() {
     return new Promise(resolve => setTimeout(resolve, 0));
 }
 
-function getClient(clientToUseForMessage) {
+function getConfigApiKey(){
+    let configApiKey = settings.openaiApiKey || settings.chatGptClient.openaiApiKey;
+    if (!configApiKey) {
+        throw new Error('Api Key not config');
+    }
+    if (configApiKey?.indexOf(',') > -1) {
+        const keys = configApiKey.split(',');
+        configApiKey = keys[Math.floor(Math.random() * keys.length)];
+    }
+    return configApiKey
+}
+
+function getClient(clientToUseForMessage, model) {
     switch (clientToUseForMessage) {
         case 'bing':
             return new BingAIClient(settings.bingAiClient);
@@ -247,18 +272,11 @@ function getClient(clientToUseForMessage) {
         case 'chatgpt':
             settings.cacheOptions.namespace = settings.cacheOptions.namespace || 'chatgpt';
             // eslint-disable-next-line no-case-declarations
-            let configApiKey = settings.openaiApiKey || settings.chatGptClient.openaiApiKey;
-            if (!configApiKey) {
-                throw new Error('Api Key not config');
-            }
-            if (configApiKey?.indexOf(',') > -1) {
-                const keys = configApiKey.split(',');
-                configApiKey = keys[Math.floor(Math.random() * keys.length)];
-            }
+            const configApiKey = getConfigApiKey()
             console.log('api key - ', configApiKey);
             return new ChatGPTClient(
                 configApiKey,
-                settings.chatGptClient,
+                Object.assign({},settings.chatGptClient,{model}),
                 settings.cacheOptions,
             );
         default:

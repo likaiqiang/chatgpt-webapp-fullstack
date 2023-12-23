@@ -1,5 +1,5 @@
 import React, {useEffect, useState, useRef, useContext} from 'react';
-import {Toast, Button, Modal, SafeArea, NoticeBar} from 'antd-mobile'
+import {Toast, Button, Modal, SafeArea, ActionSheet} from 'antd-mobile'
 import {PlayOutline, HeartOutline, LeftOutline, AntOutline, DownlandOutline} from 'antd-mobile-icons'
 import {useLocation, useNavigate} from 'react-router-dom'
 import Whether, {If, Else} from "../../components/Whether";
@@ -10,13 +10,14 @@ import Context from "../../context";
 import TextArea from './TextArea'
 import {useLatest, useMemoizedFn} from "ahooks";
 import cloneDeep from "lodash.clonedeep";
-import {useScrollToBottom} from "../../hooks";
+import {useModels, useScrollToBottom} from "../../hooks";
 import {exportData} from "../../utils";
 
 function ChatComponent(props) {
     const [question, setQuestion] = useState("");
 
-    const {cache, setCache} = useContext(Context)
+    const {cache, setCache } = useContext(Context)
+    const {models, selectModel,setSelectModel,setVisible, visible} = useModels()
 
     // const [outMsgs, setOutMsgs] = useLocalStorage('chat-out-msgs', []);
     // // 人的提问
@@ -122,7 +123,8 @@ function ChatComponent(props) {
                 message: question,
                 parentMessageId: msgId,
                 conversationId: convId,
-                userId: await getFingerprint()
+                userId: await getFingerprint(),
+                model: selectModel
             },
             getSignal: (sig) => {
                 abortSignalRef.current = sig
@@ -199,6 +201,7 @@ function ChatComponent(props) {
             directChat(e)
         },0)
     }
+
     return (<div className="container">
         <div className="chatbox">
             <div className="top-bar">
@@ -207,8 +210,10 @@ function ChatComponent(props) {
                         navigator(-1)
                     }}/>
                 </div>
-                <div className="name">WebInfra</div>
-                <div style={{fontSize:'2em'}}>
+                <Whether value={models.length}>
+                    <div className="name" onClick={()=>setVisible(true)}>{selectModel}</div>
+                </Whether>
+                <div style={{fontSize:'2em', display:'flex', alignItems:'center'}}>
                     <DownlandOutline onClick={()=>{
                         exportData({
                             retMsgs,
@@ -288,6 +293,15 @@ function ChatComponent(props) {
             </div>
             <SafeArea position='bottom'/>
         </div>
+        <ActionSheet
+            visible={visible}
+            actions={models}
+            onAction={(action)=>{
+                setSelectModel(action.key)
+                setVisible(false)
+            }}
+            onClose={() => {setVisible(false)}}
+        />
     </div>)
 }
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef,useContext } from 'react';
-import { Toast, Button, Modal, SafeArea, NoticeBar } from 'antd-mobile'
+import {Toast, Button, Modal, SafeArea, NoticeBar, ActionSheet} from 'antd-mobile'
 import {PlayOutline, HeartOutline, LeftOutline, DownlandOutline} from 'antd-mobile-icons'
 import Whether,{If,Else} from "../../components/Whether";
 import {callBridge, getFingerprint} from '../../ChatServiceBridge';
@@ -11,12 +11,14 @@ import QS from "qs";
 import {useLatest, useMemoizedFn} from "ahooks";
 import TextArea from './TextArea'
 import cloneDeep from "lodash.clonedeep";
-import {useScrollToBottom} from "../../hooks";
+import {useModels, useScrollToBottom} from "../../hooks";
 import {exportData} from "../../utils";
 
 function ChatComponent(props) {
     const [question, setQuestion] = useState("");
     const {cache,setCache} = useContext(Context)
+    const {models, selectModel,setSelectModel,setVisible, visible} = useModels()
+
     const {search} = useLocation()
     const {convId,title} = QS.parse(search.split('?').pop())
 
@@ -151,7 +153,8 @@ function ChatComponent(props) {
                 message: question,
                 parentMessageId: msgId,
                 conversationId: convId,
-                userId: await getFingerprint()
+                userId: await getFingerprint(),
+                model: selectModel
             },
             getSignal: (sig) => {
                 abortSignalRef.current = sig
@@ -238,8 +241,10 @@ function ChatComponent(props) {
                         navigator(-1)
                     }}/>
                 </div>
-                <div className="name">
-                    <div>WebInfra</div>
+                <div className="name" onClick={()=>setVisible(true)}>
+                    <Whether value={models.length}>
+                        <div>{selectModel}</div>
+                    </Whether>
                     <Whether value={title}>
                         {title}
                     </Whether>
@@ -310,6 +315,15 @@ function ChatComponent(props) {
                     </Whether>
                 </div>
             </div>
+            <ActionSheet
+                visible={visible}
+                actions={models}
+                onAction={(action)=>{
+                    setSelectModel(action.key)
+                    setVisible(false)
+                }}
+                onClose={() => {setVisible(false)}}
+            />
             <SafeArea position='bottom' />
         </div>
     </div>)
