@@ -15,7 +15,7 @@ export default {
         // (Optional) Parameters as described in https://platform.openai.com/docs/api-reference/completions
         modelOptions: {
             // You can override the model name and any other parameters here.
-            model: 'GPT-3.5-turbo-16k',
+            model: 'gpt-4-1106-preview',
             // Set max_tokens here to override the default max_tokens of 1000 for the completion.
             // max_tokens: 1000,
         },

@@ -17,7 +17,7 @@ import {exportData} from "../../utils";
 function ChatComponent(props) {
     const [question, setQuestion] = useState("");
     const {cache,setCache} = useContext(Context)
-    const {models, selectModel,setSelectModel,setVisible, visible} = useModels()
+    const {actions=[], selectModel,setSelectModel,setVisible, visible} = useModels()
 
     const {search} = useLocation()
     const {convId,title} = QS.parse(search.split('?').pop())
@@ -242,7 +242,7 @@ function ChatComponent(props) {
                     }}/>
                 </div>
                 <div className="name" onClick={()=>setVisible(true)}>
-                    <Whether value={models.length}>
+                    <Whether value={actions.length}>
                         <div>{selectModel}</div>
                     </Whether>
                     <Whether value={title}>
@@ -317,7 +317,7 @@ function ChatComponent(props) {
             </div>
             <ActionSheet
                 visible={visible}
-                actions={models}
+                actions={actions}
                 onAction={(action)=>{
                     setSelectModel(action.key)
                     setVisible(false)

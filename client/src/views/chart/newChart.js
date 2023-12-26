@@ -17,7 +17,7 @@ function ChatComponent(props) {
     const [question, setQuestion] = useState("");
 
     const {cache, setCache } = useContext(Context)
-    const {models, selectModel,setSelectModel,setVisible, visible} = useModels()
+    const {actions, selectModel,setSelectModel,setVisible, visible} = useModels()
 
     // const [outMsgs, setOutMsgs] = useLocalStorage('chat-out-msgs', []);
     // // 人的提问
@@ -210,7 +210,7 @@ function ChatComponent(props) {
                         navigator(-1)
                     }}/>
                 </div>
-                <Whether value={models.length}>
+                <Whether value={actions.length}>
                     <div className="name" onClick={()=>setVisible(true)}>{selectModel}</div>
                 </Whether>
                 <div style={{fontSize:'2em', display:'flex', alignItems:'center'}}>
@@ -295,7 +295,7 @@ function ChatComponent(props) {
         </div>
         <ActionSheet
             visible={visible}
-            actions={models}
+            actions={actions}
             onAction={(action)=>{
                 setSelectModel(action.key)
                 setVisible(false)
