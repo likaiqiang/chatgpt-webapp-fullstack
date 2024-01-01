@@ -276,9 +276,12 @@ function getClient(clientToUseForMessage, model) {
             // eslint-disable-next-line no-case-declarations
             const configApiKey = getConfigApiKey()
             console.log('api key - ', configApiKey);
+            const opts = Object.assign({},settings.chatGptClient)
+            opts.modelOptions.model = model
+
             return new ChatGPTClient(
                 configApiKey,
-                Object.assign({},settings.chatGptClient,{model}),
+                opts,
                 settings.cacheOptions,
                 settings.chatGptClient.baseurl
             );
