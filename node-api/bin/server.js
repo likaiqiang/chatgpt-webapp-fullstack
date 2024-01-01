@@ -15,11 +15,13 @@ import {fileURLToPath, pathToFileURL} from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const BillingURL = 'https://api.openai.com/dashboard/billing/credit_grants';
 
 const settings = (await import(pathToFileURL(
     path.join(__dirname,'../settings.js')
 ).toString())).default;
+
+const BillingURL = `${settings.chatGptClient.baseurl}/dashboard/billing/credit_grants`;
+
 
 // if (settings.storageFilePath && !settings.cacheOptions.store) {
 //     // make the directory and file if they don't exist
@@ -59,7 +61,7 @@ server.get('/', async (req, res) => {
 server.get('/api/get_models', async (request, reply)=>{
     const configApiKey = getConfigApiKey()
     try{
-        const resp = await fetch('https://api.openai.com/v1/models',{
+        const resp = await fetch(`${settings.chatGptClient.baseurl}/v1/models`,{
             headers:{
                 'Authorization': `Bearer ${configApiKey}`
             }
@@ -278,6 +280,7 @@ function getClient(clientToUseForMessage, model) {
                 configApiKey,
                 Object.assign({},settings.chatGptClient,{model}),
                 settings.cacheOptions,
+                settings.chatGptClient.baseurl
             );
         default:
             throw new Error(`Invalid clientToUse: ${clientToUseForMessage}`);

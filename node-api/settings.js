@@ -7,6 +7,7 @@ export default {
     // However, `cacheOptions.store` will override this if set
     storageFilePath: process.env.STORAGE_FILE_PATH || '/mnt/oss/cache.json',
     chatGptClient: {
+        baseurl:'https://api.gptapi.us', // default  https://api.openai.com
         // Your OpenAI API key (for `ChatGPTClient`)
         openaiApiKey: process.env.OPENAI_API_KEY || '',
         // (Optional) Support for a reverse proxy for the completions endpoint (private API server).

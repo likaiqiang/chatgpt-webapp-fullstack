@@ -22,8 +22,10 @@ export default class ChatGPTClient {
         apiKey,
         options = {},
         cacheOptions = {},
+        baseurl = ''
     ) {
         this.apiKey = apiKey;
+        this.baseurl = baseurl || 'https://api.openai.com'
 
         cacheOptions.namespace = cacheOptions.namespace || 'chatgpt';
         this.conversationsCache = client
@@ -115,9 +117,9 @@ export default class ChatGPTClient {
         if (this.options.reverseProxyUrl) {
             this.completionsUrl = this.options.reverseProxyUrl;
         } else if (isChatGptModel) {
-            this.completionsUrl = 'https://api.openai.com/v1/chat/completions';
+            this.completionsUrl = `${this.baseurl}/v1/chat/completions`;
         } else {
-            this.completionsUrl = 'https://api.openai.com/v1/completions';
+            this.completionsUrl = `${this.baseurl}/v1/completions`;
         }
 
         return this;
