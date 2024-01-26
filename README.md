@@ -11,8 +11,6 @@
 后台目前接入的服务默认是ChatGPT，也同时兼容BingAI或者其他国内模型。
 
 
-
-
 项目启动时需要配置 OpenAI 账户的 ApiKey，可以通过命令行中直接配置环境变量 `OPENAI_API_KEY`。
 
 如需同时配置多个ApiKey，只需要将多个key中间用 `","` 隔开即可，注意中英文切换，例如
@@ -36,5 +34,7 @@ mongodb:{
 部署前端项目，需要配置api HOST_URL，在client/src/config.js里面配置。
 
 另外，为了方便本地调试，我加了代理配置，在ChatGPTClient里面搜fetchWithProxy，如果你的服务器不需要代理，注释掉fetch: fetchWithProxy即可。
+
+<b>支持联网查询，有需要的可以在bin/server.js中自取</b>
 ## License
 

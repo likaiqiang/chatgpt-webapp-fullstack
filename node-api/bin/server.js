@@ -5,40 +5,133 @@ import cors from '@fastify/cors';
 import fastifyStatic from '@fastify/static';
 import { FastifySSEPlugin } from '@waylaidwanderer/fastify-sse-v2';
 import fs from 'fs';
-import { KeyvFile } from 'keyv-file';
-import ChatGPTClient from '../src/ChatGPTClient.js';
-import ChatGPTBrowserClient from '../src/ChatGPTBrowserClient.js';
-import BingAIClient from '../src/BingAIClient.js';
+
 import path,{dirname} from 'path'
 import {fileURLToPath, pathToFileURL} from 'url';
+import OpenAI from 'openai';
+import crypto from "crypto";
+import KeyvMongoDB from "../src/keyv-mongodb.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-
+const conversationsCache = new KeyvMongoDB()
 
 const settings = (await import(pathToFileURL(
     path.join(__dirname,'../settings.js')
 ).toString())).default;
 
-const BillingURL = `${settings.chatGptClient.baseurl}/dashboard/billing/credit_grants`;
 
+async function webSearch(query){
+    let subscription_key = settings.search.bing.subscription_key;
+    let mkt = 'en-US';
+    let params = {q: query, mkt: mkt};
+    let headers = {'Ocp-Apim-Subscription-Key': subscription_key};
 
-// if (settings.storageFilePath && !settings.cacheOptions.store) {
-//     // make the directory and file if they don't exist
-//     const dir = settings.storageFilePath.split('/').slice(0, -1).join('/');
-//     if (!fs.existsSync(dir)) {
-//         fs.mkdirSync(dir, { recursive: true });
-//     }
-//     if (!fs.existsSync(settings.storageFilePath)) {
-//         fs.writeFileSync(settings.storageFilePath, '');
-//     }
-//
-//     settings.cacheOptions.store = new KeyvFile({ filename: settings.storageFilePath });
-// }
+    const queryString = Object.keys(params)
+        .map(key => key + '=' + encodeURIComponent(params[key]))
+        .join('&')
 
-const clientToUse = settings.apiOptions?.clientToUse || settings.clientToUse || 'chatgpt';
+    return fetch(`https://api.bing.microsoft.com/v7.0/search?${queryString}`,{
+        headers
+    }).then(async res=>{
+        const resp = await res.json()
+        return resp.webPages.value.map(value=>{
+            return {
+                title: value.name,
+                link: value.url,
+                snippet: value.snippet
+            }
+        })
+    })
+}
 
-const perMessageClientOptionsWhitelist = settings.apiOptions?.perMessageClientOptionsWhitelist || null;
+const getOpenaiInstance = ()=>{
+    const configApiKey = getConfigApiKey()
+    const baseUrl = settings.chatGptClient.baseurl
+
+    return new OpenAI({
+        apiKey: configApiKey,
+        baseURL:baseUrl
+    })
+}
+
+const requestFunc = async ({functionCall, functionResult, model, content, stream})=>{
+    const openai = getOpenaiInstance()
+    return openai.chat.completions.create({
+        model,
+        messages:[
+            {
+                role:'user',
+                content: content
+            },
+            {
+                role:'assistant',
+                content: JSON.stringify(functionCall)
+            },
+            {
+                role:'function',
+                content: JSON.stringify(functionResult),
+                name: functionCall.name
+            }
+        ],
+        stream
+    })
+}
+
+const getResponseFromFC = async ({functionCall,content,model,stream})=>{
+
+    if(functionCall.name === 'search_web'){
+        const query = JSON.parse(functionCall.arguments).query
+        const searchItems =  await webSearch(query)
+        return requestFunc({
+            functionCall,
+            functionResult: searchItems,
+            content,
+            model,
+            stream
+        })
+    }
+}
+
+const functions = [
+    {
+        "name": "search_web",
+        "description": "在用户寻求信息或者搜索结果可能有帮助的时候进行网上搜索, 参数是一个可能的搜索关键字或者句子",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "搜素关键字",
+                },
+            },
+            "required": ["query"],
+        },
+        // @ts-ignore
+        "return":{
+            "type":"array",
+            "items":{
+                "type":"object",
+                "properties": {
+                    "link": {
+                        "type": "string",
+                        "description": "搜索结果的url"
+                    },
+                    "title": {
+                        "type": "string",
+                        "description": "搜索结果的标题"
+                    },
+                    "snippet":{
+                        "type":"string",
+                        "description":"搜索结果的摘要"
+                    }
+                },
+                "required": ["link","title"]
+            }
+        }
+    }
+]
+
 
 const server = fastify();
 
@@ -61,7 +154,7 @@ server.get('/', async (req, res) => {
 server.get('/api/get_models', async (request, reply)=>{
     const configApiKey = getConfigApiKey()
     try{
-        const resp = await fetch(`${settings.chatGptClient.baseurl}/v1/models`,{
+        const resp = await fetch(`${settings.chatGptClient.baseurl}/models`,{
             headers:{
                 'Authorization': `Bearer ${configApiKey}`
             }
@@ -72,63 +165,39 @@ server.get('/api/get_models', async (request, reply)=>{
         reply.code(500).send(e.toString());
     }
 })
-server.post('/api/usage', async (request, reply) => {
-    const { hash } = request.body || {};
-    if (hash !== 'magic-master') {
-        reply.code(400).send('Auth Failed');
-        return;
-    }
-    const configApiKey = settings.openaiApiKey || settings.chatGptClient.openaiApiKey;
-    if (!configApiKey) {
-        reply.code(500).send('Config Error');
-        return;
-    }
-    console.log('query user credits...');
-    if (configApiKey?.indexOf(',') > -1) {
-        const keys = configApiKey.split(',');
-        const promises = keys.map(k => fetch(
-            BillingURL,
-            {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${k}`,
-                },
-            },
-        )
-            .then(resp => resp.json())
-            .then(resp => ({
-                id: k,
-                credits: resp,
-            }
-            )));
-        const resp = await Promise.all(promises);
-        console.log('query done accounts: ', resp);
-        reply.send(resp);
-    } else {
-        const resp = await fetch(
-            BillingURL,
-            {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${configApiKey}`,
-                },
-                //   dispatcher: new ProxyAgent({
-                //     uri: 'http:/127.0.0.1:58591'
-                // }),
-            },
-        ).then(respTmp => respTmp.json())
-            .then(respTmp => ({
-                id: configApiKey,
-                credits: respTmp,
-            }));
-        console.log('query done account: ', resp);
-        reply.send(resp);
-    }
-});
 
-server.post('/api/chat', async (request, reply) => {
+const formatMessages = (messages = [])=>{
+    const msg = messages.map(message=>{
+        if(message.role === 'ChatGPT'){
+            return {
+                role:'assistant',
+                content: message.message
+            }
+        }
+        if(message.role === 'User'){
+            return {
+                role: 'user',
+                content: message.message
+            }
+        }
+        return message
+    })
+    const currentDateString = new Date().toLocaleDateString(
+        'en-us',
+        { year: 'numeric', month: 'long', day: 'numeric' },
+    );
+
+    return [
+        {
+            role: 'system',
+            content: `You are ChatGPT, a large language model trained by OpenAI. Respond conversationally.\nCurrent date: ${currentDateString}\n\n`
+        },
+        ...msg
+    ]
+}
+
+server.post('/api/chat', async (request, reply)=>{
+
     console.log('api chat message - ', JSON.stringify(request.body));
 
     const body = request.body || {};
@@ -140,100 +209,127 @@ server.post('/api/chat', async (request, reply) => {
         }
     });
 
-    let onProgress;
-    if (body.stream === true) {
-        onProgress = (token) => {
-            if (settings.apiOptions?.debug) {
-                console.debug(token);
-            }
-            if (token !== '[DONE]') {
-                reply.sse({ id: '', data: JSON.stringify(token) });
-            }
+    if (!body.message) {
+        const invalidError = new Error();
+        invalidError.data = {
+            code: 400,
+            message: 'The message parameter is required.',
         };
-    } else {
-        onProgress = null;
+        // noinspection ExceptionCaughtLocallyJS
+        throw invalidError;
+    }
+    const conversationId = body.conversationId || crypto.randomUUID();
+    const parentMessageId = body.parentMessageId || crypto.randomUUID();
+    const userId = body.userId
+    const key = `${userId},${conversationId}`
+
+    let conversation = await conversationsCache.get(key);
+    if (!conversation) {
+        conversation = {
+            messages: [],
+            createdAt: Date.now(),
+        };
     }
 
-    let result;
-    let error;
+    const userMessage = {
+        id: crypto.randomUUID(),
+        parentMessageId,
+        role: 'User',
+        message: body.message,
+    };
+    conversation.messages.push(userMessage);
+
+    const messages = formatMessages(conversation.messages);
+
+    const model = body.model || 'gpt-3.5-turbo-1106'
+    const openai = getOpenaiInstance()
+
     try {
-        if (!body.message) {
-            const invalidError = new Error();
-            invalidError.data = {
-                code: 400,
-                message: 'The message parameter is required.',
-            };
-            // noinspection ExceptionCaughtLocallyJS
-            throw invalidError;
+        const stream = await openai.chat.completions.create({
+            model,
+            messages,
+            stream: body.stream,
+            functions,
+            function_call: 'auto',
+        })
+        let functionCall = {
+            name:'',
+            arguments:''
+        }
+        let resultStream, content = ''
+        if(body.stream){
+            for await (const chunk of stream) {
+                if(chunk.choices[0]?.delta?.function_call?.name){
+                    functionCall.name = chunk.choices[0]?.delta?.function_call?.name ?? ''
+                }
+                if(chunk.choices[0]?.delta?.function_call?.arguments){
+                    functionCall.arguments += chunk.choices[0]?.delta?.function_call?.arguments ?? ''
+                }
+                if(chunk.choices[0]?.finish_reason === 'function_call') break
+                const ct = chunk.choices[0]?.delta?.content || ''
+                if(ct){
+                    content += ct
+                    reply.sse({ id: '', data: JSON.stringify(ct) });
+                }
+            }
+        }
+        else{
+            functionCall = stream.choices[0]?.message?.function_call || {
+                name:'',
+                arguments: ''
+            }
+            content = stream.choices[0]?.message?.content || ''
         }
 
-        let clientToUseForMessage = clientToUse;
-        const clientOptions = filterClientOptions(body.clientOptions, clientToUseForMessage);
-        if (clientOptions && clientOptions.clientToUse) {
-            clientToUseForMessage = clientOptions.clientToUse;
-            delete clientOptions.clientToUse;
+        if(functionCall.name){
+            resultStream = await getResponseFromFC({
+                functionCall,
+                content: body.message,
+                model,
+                stream: body.stream
+            })
+            if(body.stream){
+                for await (const chunk of resultStream){
+                    const ct = chunk.choices[0]?.delta?.content || ''
+                    content += ct
+                    reply.sse({ id: '', data: JSON.stringify(ct) });
+                }
+            }
+            else{
+                content = resultStream.choices[0]?.message?.content || ''
+            }
         }
 
-        const messageClient = getClient(clientToUseForMessage, body.model || 'gpt4-1106-preview');
-        let targetClient = messageClient;
-        if (Array.isArray(messageClient)) {
-            targetClient = messageClient[Math.floor(Math.random() * messageClient.length)];
-        }
-        result = await targetClient.sendMessage(body.message, {
-            jailbreakConversationId: body.jailbreakConversationId ? body.jailbreakConversationId.toString() : undefined,
-            conversationId: body.conversationId ? body.conversationId.toString() : undefined,
-            parentMessageId: body.parentMessageId ? body.parentMessageId.toString() : undefined,
-            conversationSignature: body.conversationSignature,
-            clientId: body.clientId,
-            invocationId: body.invocationId,
-            userId: body.userId,
-            clientOptions,
-            onProgress,
-            abortController,
-        });
-    } catch (e) {
-        error = e;
-    }
+        const replyMessage = {
+            id: crypto.randomUUID(),
+            parentMessageId: userMessage.id,
+            role: 'ChatGPT',
+            message: content,
+        };
+        conversation.messages.push(replyMessage);
 
-    if (result !== undefined) {
-        if (settings.apiOptions?.debug) {
-            console.debug(result);
+        await conversationsCache.set(key, conversation);
+
+        const result = {
+            response: content,
+            conversationId,
+            messageId: replyMessage.id
         }
-        if (body.stream === true) {
-            reply.sse({ event: 'result', id: '', data: JSON.stringify(result) });
+
+        if (body.stream) {
+            reply.sse({ event: 'result', id: '', data: JSON.stringify(result)});
             reply.sse({ id: '', data: '[DONE]' });
             await nextTick();
             reply.raw.end();
             return;
         }
         reply.send(result);
-        return;
+    } catch (e){
+        reply.send(e)
     }
+})
 
-    const code = error?.data?.code || 503;
-    if (code === 503) {
-        console.error(error);
-    } else if (settings.apiOptions?.debug) {
-        console.debug(error);
-    }
-    const message = error?.data?.message || `There was an error communicating with ${clientToUse === 'bing' ? 'Bing' : 'ChatGPT'}.`;
-    if (body.stream === true) {
-        reply.sse({
-            id: '',
-            event: 'error',
-            data: JSON.stringify({
-                code,
-                error: message,
-            }),
-        });
-        await nextTick();
-        reply.raw.end();
-        return;
-    }
-    reply.code(code).send({ error: message });
-});
-
-const port = settings.apiOptions?.port || settings.port || 3000;
+const port = 3007;
 
 server.listen({
     port,
@@ -262,85 +358,3 @@ function getConfigApiKey(){
     return configApiKey
 }
 
-function getClient(clientToUseForMessage, model) {
-    switch (clientToUseForMessage) {
-        case 'bing':
-            return new BingAIClient(settings.bingAiClient);
-        case 'chatgpt-browser':
-            return new ChatGPTBrowserClient(
-                settings.chatGptBrowserClient,
-                settings.cacheOptions,
-            );
-        case 'chatgpt':
-            settings.cacheOptions.namespace = settings.cacheOptions.namespace || 'chatgpt';
-            // eslint-disable-next-line no-case-declarations
-            const configApiKey = getConfigApiKey()
-            console.log('api key - ', configApiKey);
-            const opts = Object.assign({},settings.chatGptClient)
-            opts.modelOptions.model = model
-
-            return new ChatGPTClient(
-                configApiKey,
-                opts,
-                settings.cacheOptions,
-                settings.chatGptClient.baseurl
-            );
-        default:
-            throw new Error(`Invalid clientToUse: ${clientToUseForMessage}`);
-    }
-}
-
-/**
- * Filter objects to only include whitelisted properties set in
- * `settings.js` > `apiOptions.perMessageClientOptionsWhitelist`.
- * Returns original object if no whitelist is set.
- * @param {*} inputOptions
- * @param clientToUseForMessage
- */
-function filterClientOptions(inputOptions, clientToUseForMessage) {
-    if (!inputOptions || !perMessageClientOptionsWhitelist) {
-        return null;
-    }
-
-    // If inputOptions.clientToUse is set and is in the whitelist, use it instead of the default
-    if (
-        perMessageClientOptionsWhitelist.validClientsToUse
-        && inputOptions.clientToUse
-        && perMessageClientOptionsWhitelist.validClientsToUse.includes(inputOptions.clientToUse)
-    ) {
-        clientToUseForMessage = inputOptions.clientToUse;
-    } else {
-        inputOptions.clientToUse = clientToUseForMessage;
-    }
-
-    const whitelist = perMessageClientOptionsWhitelist[clientToUseForMessage];
-    if (!whitelist) {
-        // No whitelist, return all options
-        return inputOptions;
-    }
-
-    const outputOptions = {};
-
-    for (const property of Object.keys(inputOptions)) {
-        const allowed = whitelist.includes(property);
-
-        if (!allowed && typeof inputOptions[property] === 'object') {
-            // Check for nested properties
-            for (const nestedProp of Object.keys(inputOptions[property])) {
-                const nestedAllowed = whitelist.includes(`${property}.${nestedProp}`);
-                if (nestedAllowed) {
-                    outputOptions[property] = outputOptions[property] || {};
-                    outputOptions[property][nestedProp] = inputOptions[property][nestedProp];
-                }
-            }
-            continue;
-        }
-
-        // Copy allowed properties to outputOptions
-        if (allowed) {
-            outputOptions[property] = inputOptions[property];
-        }
-    }
-
-    return outputOptions;
-}

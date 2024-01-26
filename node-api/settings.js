@@ -62,7 +62,7 @@ export default {
     },
     // Options for the API server
     apiOptions: {
-        port: process.env.API_PORT || 3000,
+        port: process.env.API_PORT || 3001,
         host: process.env.API_HOST || '0.0.0.0',
         // (Optional) Set to true to enable `console.debug()` logging
         debug: false,
@@ -99,5 +99,10 @@ export default {
         user: process.env.MongoDB_username,
         password: process.env.MongoDB_pw,
         url: process.env.MongoDB_url
+    },
+    search:{
+        bing:{
+            subscription_key:''
+        }
     }
 };
