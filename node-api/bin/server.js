@@ -10,6 +10,10 @@ import path,{dirname} from 'path'
 import {fileURLToPath, pathToFileURL} from 'url';
 import OpenAI from 'openai';
 import crypto from "crypto";
+import { encodingForModel } from 'js-tiktoken';
+import cheerio from 'cheerio'
+import readability from 'node-readability'
+import util from 'util'
 import KeyvMongoDB from "../src/keyv-mongodb.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -20,6 +24,64 @@ const settings = (await import(pathToFileURL(
     path.join(__dirname,'../settings.js')
 ).toString())).default;
 
+const read = util.promisify(readability);
+
+function getMaxToken(modelName) {
+    const models = {
+        'gpt-3.5-turbo-1106': 16385,
+        'gpt-3.5-turbo': 4096,
+        'gpt-3.5-turbo-16k': 16385,
+        'gpt-3.5-turbo-instruct': 4096,
+        'gpt-3.5-turbo-0613': 4096,
+        'gpt-3.5-turbo-16k-0613': 16385,
+        'gpt-3.5-turbo-0301': 4096,
+        'text-davinci-003': 4096,
+        'text-davinci-002': 4096,
+        'code-davinci-002': 8001,
+        'gpt-4-1106-preview': 128000,
+        'gpt-4-vision-preview': 128000,
+        'gpt-4': 8192,
+        'gpt-4-32k': 32768,
+        'gpt-4-0613': 8192,
+        'gpt-4-32k-0613': 32768,
+        'gpt-4-0314': 8192,
+        'gpt-4-32k-0314': 32768,
+        'text-embedding-ada-002': 8191
+    };
+    return models[modelName] || -1;
+}
+
+function splitByToken(modelName,text) {
+    const maxToken = getMaxToken(modelName)
+    const enc = encodingForModel(modelName)
+    let currentLength = 0, currentText = ''
+
+    for(const ct of text){
+        const length = enc.encode(ct).length
+        if(currentLength + length > maxToken){
+            break
+        }
+        else{
+            currentLength += length
+            currentText += ct
+        }
+    }
+    return currentText
+}
+
+async function fetchUrl(url, model){
+    return read(url).then(article=>{
+        const {title, content} = article
+        article.close();
+
+        const $ = cheerio.load(content);
+        const text = $.text()
+        return {
+            title,
+            content: splitByToken(model, text)
+        }
+    })
+}
 
 async function webSearch(query){
     let subscription_key = settings.search.bing.subscription_key;
@@ -79,21 +141,53 @@ const requestFunc = async ({functionCall, functionResult, model, content, stream
 }
 
 const getResponseFromFC = async ({functionCall,content,model,stream})=>{
-
+    let funcResult = ''
     if(functionCall.name === 'search_web'){
         const query = JSON.parse(functionCall.arguments).query
-        const searchItems =  await webSearch(query)
-        return requestFunc({
-            functionCall,
-            functionResult: searchItems,
-            content,
-            model,
-            stream
-        })
+        funcResult =  await webSearch(query)
     }
+    if(functionCall.name === 'fetch_url'){
+        const url = JSON.parse(functionCall.arguments).url
+        funcResult = await fetchUrl(url, model)
+    }
+    return requestFunc({
+        functionCall,
+        functionResult: funcResult,
+        content,
+        model,
+        stream
+    })
 }
 
 const functions = [
+    {
+        "name":"fetch_url",
+        "description":"在用户寻求某个网址时请求网页的内容，参数是一个 web url",
+        "parameters":{
+            "type": "object",
+            "properties":{
+                "url": {
+                    "type": "string",
+                    "description": "请求的网址",
+                }
+            },
+            "required": ["url"],
+        },
+        // @ts-ignore
+        "return":{
+            "type":"object",
+            "properties":{
+                "title":{
+                    "type":"string",
+                    "description":"网页的标题"
+                },
+                "content":{
+                    "type":"string",
+                    "description":"网页的主要内容"
+                }
+            }
+        }
+    },
     {
         "name": "search_web",
         "description": "在用户寻求信息或者搜索结果可能有帮助的时候进行网上搜索, 参数是一个可能的搜索关键字或者句子",

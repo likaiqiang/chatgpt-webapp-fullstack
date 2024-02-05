@@ -44,6 +44,7 @@
     "@waylaidwanderer/fastify-sse-v2": "^3.1.0",
     "@waylaidwanderer/fetch-event-source": "^3.0.1",
     "boxen": "^7.0.1",
+    "cheerio": "^1.0.0-rc.12",
     "clipboardy": "^3.0.0",
     "crypto-js": "^4.1.1",
     "dotenv": "^16.0.3",
@@ -57,6 +58,7 @@
     "langchain": "^0.1.5",
     "mongodb": "^6.2.0",
     "node-fetch": "^3.3.2",
+    "node-readability": "^3.0.0",
     "ora": "^6.1.2",
     "undici": "^5.20.0",
     "ws": "^8.12.0"
