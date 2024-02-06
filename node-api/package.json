@@ -59,6 +59,7 @@
     "mongodb": "^6.2.0",
     "node-fetch": "^3.3.2",
     "node-readability": "^3.0.0",
+    "openai": "^4.26.1",
     "ora": "^6.1.2",
     "undici": "^5.20.0",
     "ws": "^8.12.0"

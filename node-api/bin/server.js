@@ -117,110 +117,111 @@ const getOpenaiInstance = ()=>{
     })
 }
 
-const requestFunc = async ({functionCall, functionResult, model, content, stream})=>{
+const getResponseFromFC = async ({toolCalls,content,model,stream,assistantMessage})=>{
+    const messages = [
+        {
+            role:'user',
+            content: content
+        },
+        assistantMessage
+    ]
+    for(const tool of toolCalls){
+        const funcName = tool.function.name
+        const arg = JSON.parse(tool.function.arguments)
+        if(funcName === 'search_web'){
+            messages.push({
+                tool_call_id: tool.id,
+                role: "tool",
+                name: funcName,
+                content: JSON.stringify(await webSearch(arg.query)),
+            })
+        }
+        if(funcName === 'fetch_url'){
+            messages.push({
+                tool_call_id: tool.id,
+                role: "tool",
+                name: funcName,
+                content: JSON.stringify(await fetchUrl(arg.url, model))
+            })
+        }
+    }
     const openai = getOpenaiInstance()
+
     return openai.chat.completions.create({
         model,
-        messages:[
-            {
-                role:'user',
-                content: content
-            },
-            {
-                role:'assistant',
-                content: JSON.stringify(functionCall)
-            },
-            {
-                role:'function',
-                content: JSON.stringify(functionResult),
-                name: functionCall.name
-            }
-        ],
+        messages,
         stream
     })
 }
 
-const getResponseFromFC = async ({functionCall,content,model,stream})=>{
-    let funcResult = ''
-    if(functionCall.name === 'search_web'){
-        const query = JSON.parse(functionCall.arguments).query
-        funcResult =  await webSearch(query)
-    }
-    if(functionCall.name === 'fetch_url'){
-        const url = JSON.parse(functionCall.arguments).url
-        funcResult = await fetchUrl(url, model)
-    }
-    return requestFunc({
-        functionCall,
-        functionResult: funcResult,
-        content,
-        model,
-        stream
-    })
-}
-
-const functions = [
+const tools = [
     {
-        "name":"fetch_url",
-        "description":"在用户寻求某个网址时请求网页的内容，参数是一个 web url",
-        "parameters":{
-            "type": "object",
-            "properties":{
-                "url": {
-                    "type": "string",
-                    "description": "请求的网址",
-                }
-            },
-            "required": ["url"],
-        },
-        // @ts-ignore
-        "return":{
-            "type":"object",
-            "properties":{
-                "title":{
-                    "type":"string",
-                    "description":"网页的标题"
+        "type":"function",
+        "function":{
+            "name":"fetch_url",
+            "description":"在用户寻求某个网址时请求网页的内容，参数是一个 web url",
+            "parameters":{
+                "type": "object",
+                "properties":{
+                    "url": {
+                        "type": "string",
+                        "description": "请求的网址",
+                    }
                 },
-                "content":{
-                    "type":"string",
-                    "description":"网页的主要内容"
+                "required": ["url"],
+            },
+            // @ts-ignore
+            "return":{
+                "type":"object",
+                "properties":{
+                    "title":{
+                        "type":"string",
+                        "description":"网页的标题"
+                    },
+                    "content":{
+                        "type":"string",
+                        "description":"网页的主要内容"
+                    }
                 }
             }
         }
     },
     {
-        "name": "search_web",
-        "description": "在用户寻求信息或者搜索结果可能有帮助的时候进行网上搜索, 参数是一个可能的搜索关键字或者句子",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "query": {
-                    "type": "string",
-                    "description": "搜素关键字",
-                },
-            },
-            "required": ["query"],
-        },
-        // @ts-ignore
-        "return":{
-            "type":"array",
-            "items":{
-                "type":"object",
+        "type": "function",
+        "function":{
+            "name": "search_web",
+            "description": "在用户寻求信息或者搜索结果可能有帮助的时候进行网上搜索, 参数是一个可能的搜索关键字或者句子",
+            "parameters": {
+                "type": "object",
                 "properties": {
-                    "link": {
+                    "query": {
                         "type": "string",
-                        "description": "搜索结果的url"
+                        "description": "搜素关键字",
                     },
-                    "title": {
-                        "type": "string",
-                        "description": "搜索结果的标题"
-                    },
-                    "snippet":{
-                        "type":"string",
-                        "description":"搜索结果的摘要"
-                    }
                 },
-                "required": ["link","title"]
+                "required": ["query"],
+            },
+            // @ts-ignore
+            "return":{
+                "type":"array",
+                "items":{
+                    "type":"object",
+                    "properties": {
+                        "link": {
+                            "type": "string",
+                            "description": "搜索结果的url"
+                        },
+                        "title": {
+                            "type": "string",
+                            "description": "搜索结果的标题"
+                        },
+                        "snippet":{
+                            "type":"string",
+                            "description":"搜索结果的摘要"
+                        }
+                    },
+                    "required": ["link","title"]
+                }
             }
         }
     }
@@ -343,42 +344,48 @@ server.post('/api/chat', async (request, reply)=>{
             model,
             messages,
             stream: body.stream,
-            functions,
-            function_call: 'auto',
+            tools,
+            tool_choice: 'auto',
         })
-        let functionCall = {
-            name:'',
-            arguments:''
-        }
-        let resultStream, content = ''
+
+        let toolCalls = []
+        let resultStream, content = '', assistantMessage = null
         if(body.stream){
             for await (const chunk of stream) {
-                if(chunk.choices[0]?.delta?.function_call?.name){
-                    functionCall.name = chunk.choices[0]?.delta?.function_call?.name ?? ''
+                if(chunk.choices[0]?.finish_reason === 'tool_calls') break
+
+                if(chunk.choices[0]?.delta?.tool_calls){
+                    if(!assistantMessage) assistantMessage = chunk.choices[0]?.delta
+                    if(toolCalls.length === 0){
+                        toolCalls = chunk.choices[0]?.delta?.tool_calls || []
+                    }
+                    else{
+                        for(const tool of (chunk.choices[0]?.delta?.tool_calls || [])){
+                            const {index} = tool
+                            toolCalls[index].function.arguments += tool.function.arguments || ''
+                        }
+                    }
                 }
-                if(chunk.choices[0]?.delta?.function_call?.arguments){
-                    functionCall.arguments += chunk.choices[0]?.delta?.function_call?.arguments ?? ''
-                }
-                if(chunk.choices[0]?.finish_reason === 'function_call') break
-                const ct = chunk.choices[0]?.delta?.content || ''
-                if(ct){
-                    content += ct
-                    reply.sse({ id: '', data: JSON.stringify(ct) });
+                else{
+                    const ct = chunk.choices[0]?.delta?.content || ''
+                    if(ct){
+                        content += ct
+                        reply.sse({ id: '', data: JSON.stringify(ct) });
+                    }
                 }
             }
         }
         else{
-            functionCall = stream.choices[0]?.message?.function_call || {
-                name:'',
-                arguments: ''
-            }
+            toolCalls = stream.choices[0]?.message?.tool_calls || []
+            assistantMessage = stream.choices[0].message
+
             content = stream.choices[0]?.message?.content || ''
         }
-
-        if(functionCall.name){
+        if(toolCalls.length){
             resultStream = await getResponseFromFC({
-                functionCall,
+                toolCalls,
                 content: body.message,
+                assistantMessage,
                 model,
                 stream: body.stream
             })
@@ -389,7 +396,7 @@ server.post('/api/chat', async (request, reply)=>{
                     reply.sse({ id: '', data: JSON.stringify(ct) });
                 }
             }
-            else{
+            else {
                 content = resultStream.choices[0]?.message?.content || ''
             }
         }
