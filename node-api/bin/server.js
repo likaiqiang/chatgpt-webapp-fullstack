@@ -28,6 +28,8 @@ const read = util.promisify(readability);
 
 function getMaxToken(modelName) {
     const models = {
+        'gpt-4-0125-preview': 128000,
+        'gpt-3.5-turbo-0125': 16385,
         'gpt-3.5-turbo-1106': 16385,
         'gpt-3.5-turbo': 4096,
         'gpt-3.5-turbo-16k': 16385,
@@ -336,7 +338,7 @@ server.post('/api/chat', async (request, reply)=>{
 
     const messages = formatMessages(conversation.messages);
 
-    const model = body.model || 'gpt-3.5-turbo-1106'
+    const model = body.model || 'gpt-3.5-turbo-0125'
     const openai = getOpenaiInstance()
 
     try {

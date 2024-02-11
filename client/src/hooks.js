@@ -2,7 +2,7 @@ import {useContext, useEffect, useState} from "react";
 import {useThrottleEffect} from "ahooks";
 import Context from "./context";
 import {HOST_URL} from "./config";
-const supportsModels = ['gpt-4-1106-preview','gpt-3.5-turbo-1106']
+const supportsModels = ['gpt-4-0125-preview','gpt-3.5-turbo-0125']
 
 export function useInput(initialValue) {
     const [value, setValue] = useState(initialValue);
