@@ -35,6 +35,6 @@ mongodb:{
 
 另外，为了方便本地调试，我加了代理配置，在ChatGPTClient里面搜fetchWithProxy，如果你的服务器不需要代理，注释掉fetch: fetchWithProxy即可。
 
-<b>支持联网查询，有需要的可以在bin/server.js中自取</b>
+<b>支持联网查询，有需要的可以在node-api/bin/server.js中自取</b>
 ## License
 
