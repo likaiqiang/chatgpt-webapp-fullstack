@@ -71,12 +71,42 @@ function splitByToken(modelName,text) {
     return currentText
 }
 
+function convertRelativeLinksToAbsolute({owner, repo, branch ,path: filePath, markdownContent}) {
+    const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${filePath}`;
+    const dirname = path.dirname(url)
+    // 使用正则表达式匹配Markdown中的链接
+    const regex = /\]\((.*?)\)/g;
+    let match;
+
+    // 遍历所有的链接
+    while ((match = regex.exec(markdownContent)) !== null) {
+        const link = match[1];
+
+        // 检查链接是否是相对地址
+        if (!link.startsWith('http')) {
+            // 将相对地址转换为绝对地址
+            const absoluteLink = path.join(dirname, link)
+
+            // 在Markdown内容中替换相对地址为绝对地址
+            markdownContent = markdownContent.replace(link, absoluteLink);
+        }
+    }
+
+    return markdownContent;
+}
+
 async function getGithubFileContent(owner, repo, branch ,path, model){
     const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`;
     try {
         const text = await fetch(url).then(res=>res.text())
         return {
-            content: splitByToken(model, text)
+            content: convertRelativeLinksToAbsolute({
+                owner,
+                repo,
+                path,
+                branch,
+                markdownContent: splitByToken(model, text)
+            })
         }
     } catch (error) {
         console.error('Error fetching file:', error.message);
