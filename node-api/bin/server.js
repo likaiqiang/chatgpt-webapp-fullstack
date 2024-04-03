@@ -71,6 +71,18 @@ function splitByToken(modelName,text) {
     return currentText
 }
 
+async function getGithubFileContent(owner, repo, branch ,path, model){
+    const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`;
+    try {
+        const text = await fetch(url).then(res=>res.text())
+        return {
+            content: splitByToken(model, text)
+        }
+    } catch (error) {
+        console.error('Error fetching file:', error.message);
+    }
+}
+
 async function fetchUrl(url, model){
     return read(url).then(article=>{
         const {title, content} = article
@@ -146,6 +158,14 @@ const getResponseFromFC = async ({toolCalls,content,model,stream,assistantMessag
                 content: JSON.stringify(await fetchUrl(arg.url, model))
             })
         }
+        if(funcName === 'get_github_file_content'){
+            messages.push({
+                tool_call_id: tool.id,
+                role: "tool",
+                name: funcName,
+                content: JSON.stringify(await getGithubFileContent(arg.owner, arg.repo, arg.branch, arg.path, model))
+            })
+        }
     }
     const openai = getOpenaiInstance()
 
@@ -157,6 +177,45 @@ const getResponseFromFC = async ({toolCalls,content,model,stream,assistantMessag
 }
 
 const tools = [
+    {
+        "type": "function",
+        "function":{
+            "name": "get_github_file_content",
+            "description": "在用户请求某个托管在github上的文件内容时调用，参数有多个: owner、repo、branch、path",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "owner": {
+                        "type": "string",
+                        "description": "github仓库的所有者",
+                    },
+                    "repo": {
+                        "type": "string",
+                        "description": "github仓库的名称",
+                    },
+                    "branch": {
+                        "type": "string",
+                        "description": "github分支名",
+                    },
+                    "path":{
+                        "type": "string",
+                        "description": "文件在github中的路径",
+                    }
+                },
+                "required": ["owner","repo","branch","path"],
+            },
+            // @ts-ignore
+            "return":{
+                "type":"object",
+                "properties":{
+                    "content":{
+                        "type":"string",
+                        "description":"文件的内容"
+                    }
+                }
+            }
+        }
+    },
     {
         "type":"function",
         "function":{
