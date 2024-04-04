@@ -245,13 +245,11 @@
 
 .talking-item {
     position: relative;
-    display: inline-block;
-    width: fit-content;
     box-sizing: border-box;
-    max-width: calc(100% - 30px);
+    max-width: 100%;
     margin: 5px;
     font-size: 0.7em;
-    padding: 10px 10px 10px 12px;
+    padding: 10px;
     border-radius: 20px;
     display: flex;
     flex-direction: row;
@@ -307,7 +305,10 @@
     -ms-overflow-style: none;  /* IE and Edge */
   }
 
-
+.bubble img,video{
+    width: 100%;
+    object-fit: contain;
+}
 .lower {
     margin-top: 45px;
 }
