@@ -73,7 +73,8 @@ function splitByToken(modelName,text) {
 
 function convertRelativeLinksToAbsolute({owner, repo, branch ,path: filePath, markdownContent}) {
     const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${filePath}`;
-    const dirname = path.dirname(url)
+    const parentPath = path.dirname(url)
+    const baseUrl = new URL( parentPath.endsWith('/') ? parentPath : parentPath + '/' )
     // 使用正则表达式匹配Markdown中的链接
     const regex = /\]\((.*?)\)/g;
     let match;
@@ -83,9 +84,9 @@ function convertRelativeLinksToAbsolute({owner, repo, branch ,path: filePath, ma
         const link = match[1];
 
         // 检查链接是否是相对地址
-        if (!link.startsWith('http')) {
+        if (link && !link.startsWith('http')) {
             // 将相对地址转换为绝对地址
-            const absoluteLink = path.join(dirname, link)
+            const absoluteLink = new URL(link, baseUrl).href
 
             // 在Markdown内容中替换相对地址为绝对地址
             markdownContent = markdownContent.replace(link, absoluteLink);
@@ -100,13 +101,15 @@ async function getGithubFileContent(owner, repo, branch ,path, model){
     try {
         const text = await fetch(url).then(res=>res.text())
         return {
-            content: convertRelativeLinksToAbsolute({
-                owner,
-                repo,
-                path,
-                branch,
-                markdownContent: splitByToken(model, text)
-            })
+            content: splitByToken(
+                model,
+                convertRelativeLinksToAbsolute({
+                    owner,
+                    repo,
+                    path,
+                    branch,
+                    markdownContent: text
+                }))
         }
     } catch (error) {
         console.error('Error fetching file:', error.message);
@@ -211,7 +214,7 @@ const tools = [
         "type": "function",
         "function":{
             "name": "get_github_file_content",
-            "description": "在用户请求某个托管在github上的文件内容时调用，参数有多个: owner、repo、branch、path",
+            "description": "在用户寻求某个托管在github上的文件内容时调用，参数有多个: owner、repo、branch、path",
             "parameters": {
                 "type": "object",
                 "properties": {
