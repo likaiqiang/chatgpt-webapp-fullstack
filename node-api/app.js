@@ -328,7 +328,7 @@ await server.register(fastifyStatic, {
 });
 
 await server.register(cors, {
-    origin: 'https://an619.xyz'
+    origin: '×'
 });
 
 server.get('/', async (req, res) => {

@@ -2,7 +2,6 @@
   "name": "chat-client",
   "version": "1.0.0",
   "private": true,
-  "homepage": "https://chat.webinfra.cloud/build",
   "dependencies": {
     "@babel/core": "^7.16.0",
     "@fingerprintjs/fingerprintjs": "^4.1.0",

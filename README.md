@@ -58,7 +58,7 @@ ChatGPT 允许用户指定特定的网页，并在客户端内直接访问该网
 
 ## 作者
 
-[你的名字](https://github.com/likaiqiang)
+[likaiqiang](https://github.com/likaiqiang)
 
 ## 许可证
 
