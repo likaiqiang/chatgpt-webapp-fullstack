@@ -1,28 +1,22 @@
 #!/usr/bin/env node
 /* eslint-disable no-undef */
+import 'dotenv/config'
 import fastify from 'fastify';
 import cors from '@fastify/cors';
 import fastifyStatic from '@fastify/static';
 import { FastifySSEPlugin } from '@waylaidwanderer/fastify-sse-v2';
 import fs from 'fs';
 
-import path,{dirname} from 'path'
-import {fileURLToPath, pathToFileURL} from 'url';
 import OpenAI from 'openai';
 import crypto from "crypto";
 import { encodingForModel } from 'js-tiktoken';
 import cheerio from 'cheerio'
 import readability from 'node-readability'
 import util from 'util'
-import KeyvMongoDB from "../src/keyv-mongodb.js";
+import KeyvMongoDB from "./keyv-mongodb.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 const conversationsCache = new KeyvMongoDB()
 
-const settings = (await import(pathToFileURL(
-    path.join(__dirname,'../settings.js')
-).toString())).default;
 
 const read = util.promisify(readability);
 
@@ -71,10 +65,11 @@ function splitByToken(modelName,text) {
     return currentText
 }
 
-function convertRelativeLinksToAbsolute({owner, repo, branch ,path: filePath, markdownContent}) {
-    const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${filePath}`;
-    const parentPath = path.dirname(url)
-    const baseUrl = new URL( parentPath.endsWith('/') ? parentPath : parentPath + '/' )
+function convertRelativeLinksToAbsolute({owner, repo, branch ,path, markdownContent}) {
+    const protocol = 'https://'
+    const filePath = path.startsWith('http') ? path : (protocol + path)
+
+    const baseUrl = new URL( filePath )
     // 使用正则表达式匹配Markdown中的链接
     const regex = /\]\((.*?)\)/g;
     let match;
@@ -85,11 +80,11 @@ function convertRelativeLinksToAbsolute({owner, repo, branch ,path: filePath, ma
 
         // 检查链接是否是相对地址
         if (link && !link.startsWith('http')) {
-            // 将相对地址转换为绝对地址
-            const absoluteLink = new URL(link, baseUrl).href
+            const combinePath = new URL(link, baseUrl).href.slice(protocol.length)
+            const combineUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${combinePath}`
 
             // 在Markdown内容中替换相对地址为绝对地址
-            markdownContent = markdownContent.replace(link, absoluteLink);
+            markdownContent = markdownContent.replace(link, combineUrl);
         }
     }
 
@@ -131,7 +126,7 @@ async function fetchUrl(url, model){
 }
 
 async function webSearch(query){
-    let subscription_key = settings.search.bing.subscription_key;
+    let subscription_key = process.env.BING_SUBSCRIPTION_KEY
     let mkt = 'en-US';
     let params = {q: query, mkt: mkt};
     let headers = {'Ocp-Apim-Subscription-Key': subscription_key};
@@ -156,15 +151,16 @@ async function webSearch(query){
 
 const getOpenaiInstance = ()=>{
     const configApiKey = getConfigApiKey()
-    const baseUrl = settings.chatGptClient.baseurl
+    const baseUrl = process.env.OPENAI_BASEURL
 
     return new OpenAI({
         apiKey: configApiKey,
-        baseURL:baseUrl
+        baseURL: baseUrl
     })
 }
 
 const getResponseFromFC = async ({toolCalls,content,model,stream,assistantMessage})=>{
+    console.log('model',model)
     const messages = [
         {
             role:'user',
@@ -332,7 +328,7 @@ await server.register(fastifyStatic, {
 });
 
 await server.register(cors, {
-    origin: '*',
+    origin: 'https://an619.xyz'
 });
 
 server.get('/', async (req, res) => {
@@ -343,7 +339,7 @@ server.get('/', async (req, res) => {
 server.get('/api/get_models', async (request, reply)=>{
     const configApiKey = getConfigApiKey()
     try{
-        const resp = await fetch(`${settings.chatGptClient.baseurl}/models`,{
+        const resp = await fetch(`${process.env.OPENAI_BASEURL}/models`,{
             headers:{
                 'Authorization': `Bearer ${configApiKey}`
             }
@@ -384,12 +380,12 @@ const formatMessages = (messages = [])=>{
         ...msg
     ]
 }
-
 server.post('/api/chat', async (request, reply)=>{
 
     console.log('api chat message - ', JSON.stringify(request.body));
 
     const body = request.body || {};
+
     const abortController = new AbortController();
 
     reply.raw.on('close', () => {
@@ -441,7 +437,6 @@ server.post('/api/chat', async (request, reply)=>{
             tools,
             tool_choice: 'auto',
         })
-
         let toolCalls = []
         let resultStream, content = '', assistantMessage = null
         if(body.stream){
@@ -475,6 +470,7 @@ server.post('/api/chat', async (request, reply)=>{
 
             content = stream.choices[0]?.message?.content || ''
         }
+
         if(toolCalls.length){
             resultStream = await getResponseFromFC({
                 toolCalls,
@@ -520,15 +516,16 @@ server.post('/api/chat', async (request, reply)=>{
         }
         reply.send(result);
     } catch (e){
+        console.log('error',e)
         reply.send(e)
     }
 })
 
-const port = 3007;
+const port = 9000;
 
 server.listen({
     port,
-    host: settings.apiOptions?.host || 'localhost',
+    host: '127.0.0.1',
 }, (error) => {
     console.log('server started: ', port);
     if (error) {
@@ -542,7 +539,7 @@ function nextTick() {
 }
 
 function getConfigApiKey(){
-    let configApiKey = settings.openaiApiKey || settings.chatGptClient.openaiApiKey;
+    let configApiKey = process.env.OPENAI_APIKEY
     if (!configApiKey) {
         throw new Error('Api Key not config');
     }
@@ -552,4 +549,3 @@ function getConfigApiKey(){
     }
     return configApiKey
 }
-

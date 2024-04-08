@@ -1,40 +1,65 @@
-# FullStack-ChatGPT-WebApp
+# ChatGPT 全栈项目
 
-![GitHub package.json dependency version (prod)](https://img.shields.io/github/package-json/dependency-version/WeixinCloud/wxcloudrun-express/express)
-![GitHub package.json dependency version (prod)](https://img.shields.io/github/package-json/dependency-version/WeixinCloud/wxcloudrun-express/sequelize)
+这是一个基于 ChatGPT 的全栈项目，具有以下主要功能：
+
+- 支持历史会话记录
+- 支持联网查询（内置 Bing 搜索引擎）
+- 支持访问特定网页
+
+## 如何运行
+
+### 环境要求
+
+- Node.js
+- npm 或 yarn
+
+### 步骤
+
+1. 克隆项目：
+
+   ```
+   git clone https://github.com/likaiqiang/chatgpt-webapp-fullstack.git
+   ```
+
+2. 启动项目：
+
+   ```
+   前端:
+   client/src/config.js 配置后端 server url
+   npm install
+   npm start
+   
+   后端
+   node-api .env
+   npm install
+   npm start
+   ```
+## 功能说明
+
+### 历史会话记录
+
+ChatGPT 会话将会被记录并存储在服务器端，以便保持连续对话。
+
+### 联网查询
+
+ChatGPT 具有内置的 Bing 搜索引擎，可以通过输入特定的命令触发搜索并获取相关信息。
+
+### 访问特定网页
+
+ChatGPT 允许用户指定特定的网页，并在客户端内直接访问该网页。
+
+## 技术栈
+
+- **前端**：
+    - React
+- **后端**：
+    - Node.js
 
 
-这是一个 ChatGPT 聊天应用，包含网页端App和一个Node服务，可快速部署一套自用的完整智能聊天服务。
+## 作者
 
-经过线上检验完全可以成为学习、工作和生活中的小帮手，适合感兴趣的同学自用。
+[你的名字](https://github.com/likaiqiang)
 
-后台目前接入的服务默认是ChatGPT，也同时兼容BingAI或者其他国内模型。
+## 许可证
 
-
-项目启动时需要配置 OpenAI 账户的 ApiKey，可以通过命令行中直接配置环境变量 `OPENAI_API_KEY`。
-
-如需同时配置多个ApiKey，只需要将多个key中间用 `","` 隔开即可，注意中英文切换，例如
-```
-OPENAI_API_KEY=sk-Ek6f5n*q7X*8I2mgH****T***F**I97ON**y*BzUpc,sk-Ek6f5n*q7X*8I2mgH****T***F**I97ON**y*BzUpc,sk-Ek6f5n*q7X*8I2mgH****T***F**I97ON**y*BzUpc
-```
-
-![settings.js](https://flashpixel-1253674045.cos.ap-shanghai.myqcloud.com/WeChatWorkScreenshot_1f621a72-0215-4b7c-8788-691042134155.png)
-
-项目接入了mongodb，用于缓存对话历史，所以还需要配置数据库相关:
-
-settings.js里面的mongodb，例如: 
-
-```javascript
-mongodb:{
-    user: process.env.MongoDB_username,
-    password: process.env.MongoDB_pw,
-    url: process.env.MongoDB_url
-}
-```
-部署前端项目，需要配置api HOST_URL，在client/src/config.js里面配置。
-
-另外，为了方便本地调试，我加了代理配置，在ChatGPTClient里面搜fetchWithProxy，如果你的服务器不需要代理，注释掉fetch: fetchWithProxy即可。
-
-<b>支持联网查询，有需要的可以在node-api/bin/server.js中自取</b>
-## License
-
+[License](https://github.com/likaiqiang/chatgpt-webapp-fullstack/blob/main/LICENSE)

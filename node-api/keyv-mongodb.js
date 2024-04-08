@@ -1,17 +1,8 @@
 import { MongoClient } from 'mongodb'
-import path,{dirname} from 'path'
-import {fileURLToPath, pathToFileURL} from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const settings = (await import(pathToFileURL(
-    path.join(__dirname,'../settings.js')
-).toString())).default;
 
 class KeyvMongoDB {
     constructor() {
-        const mongoUrl = `mongodb://${settings.mongodb.user}:${settings.mongodb.password}@${settings.mongodb.url}`
+        const mongoUrl = process.env.MONGODB_URL
 
         this.collectionName = 'keyv'
         this.dbName = 'chat_bot'
@@ -47,7 +38,7 @@ class KeyvMongoDB {
             },
         )
 
-       await this.mongo.createIndex(
+        await this.mongo.createIndex(
             { expiresAt: 1 },
             {
                 expireAfterSeconds: 0,

@@ -3,18 +3,10 @@
   "version": "1.28.0",
   "description": "A ChatGPT implementation using the official ChatGPT model via OpenAI's API.",
   "main": "index.js",
-  "bin": {
-    "chatgpt-api": "bin/server.js",
-    "chatgpt-cli": "bin/cli.js"
-  },
   "scripts": {
-    "test": "npx eslint .",
-    "start": "node bin/server.js",
-    "server": "node bin/server.js",
-    "cli": "node bin/cli.js"
+    "start": "node app.js"
   },
-  "author": "walkthunder",
-  "license": "MIT",
+  "author": "likaiqiang",
   "type": "module",
   "repository": {
     "type": "git",
@@ -34,8 +26,7 @@
     "openai-api",
     "gpt-4",
     "chatgpt",
-    "chatgpt-api",
-    "bing-chat"
+    "chatgpt-api"
   ],
   "dependencies": {
     "@dqbd/tiktoken": "^0.4.0",
