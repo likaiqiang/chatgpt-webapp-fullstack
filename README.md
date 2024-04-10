@@ -44,6 +44,8 @@ ChatGPT 会话将会被记录并存储在服务器端，以便保持连续对话
 
 ChatGPT 具有内置的 Bing 搜索引擎，可以通过输入特定的命令触发搜索并获取相关信息。
 
+![0e8d14b8-6d64-4c21-a7ea-1ca428b4c93e-微信图片_20240410151257.jpg](https://likaiqiang-blog.oss-cn-beijing.aliyuncs.com/images/0e8d14b8-6d64-4c21-a7ea-1ca428b4c93e-微信图片_20240410151257.jpg)
+
 ### 访问特定网页
 
 ChatGPT 允许用户指定特定的网页，并在客户端内直接访问该网页。
