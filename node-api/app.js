@@ -13,6 +13,7 @@ import { encodingForModel } from 'js-tiktoken';
 import cheerio from 'cheerio'
 import readability from 'node-readability'
 import util from 'util'
+import {getConfigApiKey} from './pool.js'
 import KeyvMongoDB from "./keyv-mongodb.js";
 
 const conversationsCache = new KeyvMongoDB()
@@ -149,13 +150,10 @@ async function webSearch(query){
     })
 }
 
-const getOpenaiInstance = ()=>{
-    const configApiKey = getConfigApiKey()
-    const baseUrl = process.env.OPENAI_BASEURL
-
+const getOpenaiInstance = async (token)=>{
     return new OpenAI({
-        apiKey: configApiKey,
-        baseURL: baseUrl
+        baseURL: process.env.OPENAI_BASEURL,
+        apiKey: token
     })
 }
 
@@ -196,12 +194,14 @@ const getResponseFromFC = async ({toolCalls,content,model,stream,assistantMessag
             })
         }
     }
-    const openai = getOpenaiInstance()
-
-    return openai.chat.completions.create({
-        model,
-        messages,
-        stream
+    const tokenHandler  = await getConfigApiKey()
+    return tokenHandler.execute(async token=>{
+        const openai = await getOpenaiInstance(token)
+        return openai.chat.completions.create({
+            model,
+            messages,
+            stream
+        })
     })
 }
 
@@ -328,7 +328,7 @@ await server.register(fastifyStatic, {
 });
 
 await server.register(cors, {
-    origin: '×'
+    origin: 'http://127.0.0.1:3000'
 });
 
 server.get('/', async (req, res) => {
@@ -337,18 +337,21 @@ server.get('/', async (req, res) => {
 });
 
 server.get('/api/get_models', async (request, reply)=>{
-    const configApiKey = getConfigApiKey()
-    try{
-        const resp = await fetch(`${process.env.OPENAI_BASEURL}/models`,{
-            headers:{
-                'Authorization': `Bearer ${configApiKey}`
-            }
-        }).then(res=>res.json())
-        reply.send(resp)
-        //reply.code(400).send('Auth Failed');
-    } catch (e){
-        reply.code(500).send(e.toString());
-    }
+    const tokenHandler  = await getConfigApiKey()
+    await tokenHandler.execute(async token=>{
+        try{
+            const resp = await fetch(`${process.env.OPENAI_BASEURL}/models`,{
+                headers:{
+                    'Authorization': `Bearer ${token}`
+                }
+            }).then(res=>res.json())
+            reply.send(resp)
+            //reply.code(400).send('Auth Failed');
+        } catch (e){
+            reply.code(500).send(e.toString());
+        }
+    })
+
 })
 
 const formatMessages = (messages = [])=>{
@@ -427,98 +430,102 @@ server.post('/api/chat', async (request, reply)=>{
     const messages = formatMessages(conversation.messages);
 
     const model = body.model || 'gpt-3.5-turbo-0125'
-    const openai = getOpenaiInstance()
+    const tokenHandler  = await getConfigApiKey()
+    await tokenHandler.execute(async token=>{
+        const openai = await getOpenaiInstance(token)
 
-    try {
-        const stream = await openai.chat.completions.create({
-            model,
-            messages,
-            stream: body.stream,
-            tools,
-            tool_choice: 'auto',
-        })
-        let toolCalls = []
-        let resultStream, content = '', assistantMessage = null
-        if(body.stream){
-            for await (const chunk of stream) {
-                if(chunk.choices[0]?.finish_reason === 'tool_calls') break
+        try {
+            const stream = await openai.chat.completions.create({
+                model,
+                messages,
+                stream: body.stream,
+                tools,
+                tool_choice: 'auto',
+            })
+            let toolCalls = []
+            let resultStream, content = '', assistantMessage = null
+            if(body.stream){
+                for await (const chunk of stream) {
+                    if(chunk.choices[0]?.finish_reason === 'tool_calls') break
 
-                if(chunk.choices[0]?.delta?.tool_calls){
-                    if(!assistantMessage) assistantMessage = chunk.choices[0]?.delta
-                    if(toolCalls.length === 0){
-                        toolCalls = chunk.choices[0]?.delta?.tool_calls || []
+                    if(chunk.choices[0]?.delta?.tool_calls){
+                        if(!assistantMessage) assistantMessage = chunk.choices[0]?.delta
+                        if(toolCalls.length === 0){
+                            toolCalls = chunk.choices[0]?.delta?.tool_calls || []
+                        }
+                        else{
+                            for(const tool of (chunk.choices[0]?.delta?.tool_calls || [])){
+                                const {index} = tool
+                                toolCalls[index].function.arguments += tool.function.arguments || ''
+                            }
+                        }
                     }
                     else{
-                        for(const tool of (chunk.choices[0]?.delta?.tool_calls || [])){
-                            const {index} = tool
-                            toolCalls[index].function.arguments += tool.function.arguments || ''
+                        const ct = chunk.choices[0]?.delta?.content || ''
+                        if(ct){
+                            content += ct
+                            reply.sse({ id: '', data: JSON.stringify(ct) });
                         }
                     }
                 }
-                else{
-                    const ct = chunk.choices[0]?.delta?.content || ''
-                    if(ct){
+            }
+            else{
+                toolCalls = stream.choices[0]?.message?.tool_calls || []
+                assistantMessage = stream.choices[0].message
+
+                content = stream.choices[0]?.message?.content || ''
+            }
+
+            if(toolCalls.length){
+                resultStream = await getResponseFromFC({
+                    toolCalls,
+                    content: body.message,
+                    assistantMessage,
+                    model,
+                    stream: body.stream
+                })
+                if(body.stream){
+                    for await (const chunk of resultStream){
+                        const ct = chunk.choices[0]?.delta?.content || ''
                         content += ct
                         reply.sse({ id: '', data: JSON.stringify(ct) });
                     }
                 }
-            }
-        }
-        else{
-            toolCalls = stream.choices[0]?.message?.tool_calls || []
-            assistantMessage = stream.choices[0].message
-
-            content = stream.choices[0]?.message?.content || ''
-        }
-
-        if(toolCalls.length){
-            resultStream = await getResponseFromFC({
-                toolCalls,
-                content: body.message,
-                assistantMessage,
-                model,
-                stream: body.stream
-            })
-            if(body.stream){
-                for await (const chunk of resultStream){
-                    const ct = chunk.choices[0]?.delta?.content || ''
-                    content += ct
-                    reply.sse({ id: '', data: JSON.stringify(ct) });
+                else {
+                    content = resultStream.choices[0]?.message?.content || ''
                 }
             }
-            else {
-                content = resultStream.choices[0]?.message?.content || ''
+
+            const replyMessage = {
+                id: crypto.randomUUID(),
+                parentMessageId: userMessage.id,
+                role: 'ChatGPT',
+                message: content,
+            };
+            conversation.messages.push(replyMessage);
+
+            await conversationsCache.set(key, conversation);
+
+            const result = {
+                response: content,
+                conversationId,
+                messageId: replyMessage.id
             }
+
+            if (body.stream) {
+                reply.sse({ event: 'result', id: '', data: JSON.stringify(result)});
+                reply.sse({ id: '', data: '[DONE]' });
+                await nextTick();
+                reply.raw.end();
+                return;
+            }
+            reply.send(result);
+        } catch (e){
+            console.log('error',e)
+            reply.send(e)
         }
+    })
 
-        const replyMessage = {
-            id: crypto.randomUUID(),
-            parentMessageId: userMessage.id,
-            role: 'ChatGPT',
-            message: content,
-        };
-        conversation.messages.push(replyMessage);
-
-        await conversationsCache.set(key, conversation);
-
-        const result = {
-            response: content,
-            conversationId,
-            messageId: replyMessage.id
-        }
-
-        if (body.stream) {
-            reply.sse({ event: 'result', id: '', data: JSON.stringify(result)});
-            reply.sse({ id: '', data: '[DONE]' });
-            await nextTick();
-            reply.raw.end();
-            return;
-        }
-        reply.send(result);
-    } catch (e){
-        console.log('error',e)
-        reply.send(e)
-    }
 })
 
 const port = 9000;
@@ -538,14 +545,3 @@ function nextTick() {
     return new Promise(resolve => setTimeout(resolve, 0));
 }
 
-function getConfigApiKey(){
-    let configApiKey = process.env.OPENAI_APIKEY
-    if (!configApiKey) {
-        throw new Error('Api Key not config');
-    }
-    if (configApiKey?.indexOf(',') > -1) {
-        const keys = configApiKey.split(',');
-        configApiKey = keys[Math.floor(Math.random() * keys.length)];
-    }
-    return configApiKey
-}
