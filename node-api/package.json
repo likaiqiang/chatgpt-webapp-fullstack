@@ -2,7 +2,7 @@
   "name": "@frontend-engineering/node-api",
   "version": "1.28.0",
   "description": "A ChatGPT implementation using the official ChatGPT model via OpenAI's API.",
-  "main": "index.js",
+  "main": "app.js",
   "scripts": {
     "start": "node app.js"
   },

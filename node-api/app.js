@@ -437,7 +437,7 @@ server.post('/api/chat', async (request, reply)=>{
         try {
             const stream = await openai.chat.completions.create({
                 model,
-                messages,
+                messages: messages.slice(-10),
                 stream: body.stream,
                 tools,
                 tool_choice: 'auto',
