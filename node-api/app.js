@@ -450,13 +450,16 @@ server.post('/api/chat', async (request, reply)=>{
 
                     if(chunk.choices[0]?.delta?.tool_calls){
                         if(!assistantMessage) assistantMessage = chunk.choices[0]?.delta
-                        if(toolCalls.length === 0){
-                            toolCalls = chunk.choices[0]?.delta?.tool_calls || []
-                        }
-                        else{
-                            for(const tool of (chunk.choices[0]?.delta?.tool_calls || [])){
-                                const {index} = tool
+                        // if(toolCalls.length === 0){
+                        //     toolCalls = chunk.choices[0]?.delta?.tool_calls || []
+                        // }
+                        for(const tool of (chunk.choices[0]?.delta?.tool_calls || [])){
+                            const {index} = tool
+                            if(toolCalls[index]){
                                 toolCalls[index].function.arguments += tool.function.arguments || ''
+                            }
+                            else{
+                                toolCalls[index] = tool
                             }
                         }
                     }
