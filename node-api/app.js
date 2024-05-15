@@ -160,6 +160,7 @@ const getOpenaiInstance = async (token)=>{
 const getResponseFromFC = async ({toolCalls,content,model,stream,assistantMessage})=>{
     console.log('model',model)
     const messages = [
+        getSystemPrompt(),
         {
             role:'user',
             content: content
@@ -354,6 +355,17 @@ server.get('/api/get_models', async (request, reply)=>{
 
 })
 
+const getSystemPrompt = ()=>{
+    const currentDateString = new Date().toLocaleDateString(
+        'en-us',
+        { year: 'numeric', month: 'long', day: 'numeric' },
+    );
+    return {
+        role: 'system',
+        content: `You are ChatGPT, a large language model trained by OpenAI. Respond conversationally.\nCurrent date: ${currentDateString}\n\n`
+    }
+}
+
 const formatMessages = (messages = [])=>{
     const msg = messages.map(message=>{
         if(message.role === 'ChatGPT'){
@@ -370,16 +382,9 @@ const formatMessages = (messages = [])=>{
         }
         return message
     })
-    const currentDateString = new Date().toLocaleDateString(
-        'en-us',
-        { year: 'numeric', month: 'long', day: 'numeric' },
-    );
 
     return [
-        {
-            role: 'system',
-            content: `You are ChatGPT, a large language model trained by OpenAI. Respond conversationally.\nCurrent date: ${currentDateString}\n\n`
-        },
+        getSystemPrompt(),
         ...msg
     ]
 }
@@ -443,16 +448,12 @@ server.post('/api/chat', async (request, reply)=>{
                 tool_choice: 'auto',
             })
             let toolCalls = []
-            let resultStream, content = '', assistantMessage = null
+            let resultStream, content = '', assistantMessage = {role:'assistant', content:'', tool_calls:[]}
             if(body.stream){
                 for await (const chunk of stream) {
                     if(chunk.choices[0]?.finish_reason === 'tool_calls') break
 
                     if(chunk.choices[0]?.delta?.tool_calls){
-                        if(!assistantMessage) assistantMessage = chunk.choices[0]?.delta
-                        // if(toolCalls.length === 0){
-                        //     toolCalls = chunk.choices[0]?.delta?.tool_calls || []
-                        // }
                         for(const tool of (chunk.choices[0]?.delta?.tool_calls || [])){
                             const {index} = tool
                             if(toolCalls[index]){
@@ -471,6 +472,7 @@ server.post('/api/chat', async (request, reply)=>{
                         }
                     }
                 }
+                assistantMessage.tool_calls = toolCalls
             }
             else{
                 toolCalls = stream.choices[0]?.message?.tool_calls || []
