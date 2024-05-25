@@ -7,6 +7,10 @@ import {Prism as SyntaxHighlighter} from "react-syntax-highlighter";
 import {vscDarkPlus} from "react-syntax-highlighter/dist/cjs/styles/prism";
 import {RedoOutline} from "antd-mobile-icons";
 import { deepEqual } from 'fast-equals';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';  // 引入 KaTeX 的 CSS 样式
+
 
 const copyItem = (text) => {
     return (e) => {
@@ -62,6 +66,8 @@ class Messages extends React.Component{
                                     <div className={`bubble`} key={ret.msg}>
                                         <ReactMarkdown
                                             children={ret.msg}
+                                            remarkPlugins={[remarkMath]}
+                                            rehypePlugins={[rehypeKatex]}
                                             components={{
                                                 code({node, inline, className, children, ...props}) {
                                                     const match = /language-(\w+)/.exec(className || '')
