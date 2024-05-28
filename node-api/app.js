@@ -13,8 +13,9 @@ import { encodingForModel } from 'js-tiktoken';
 import cheerio from 'cheerio'
 import readability from 'node-readability'
 import util from 'util'
-import {getConfigApiKey} from './pool.js'
+import { getConfigApiKey } from './pool.js'
 import KeyvMongoDB from "./keyv-mongodb.js";
+import imageType from 'image-type';
 
 const conversationsCache = new KeyvMongoDB()
 
@@ -36,6 +37,7 @@ function getMaxToken(modelName) {
         'text-davinci-002': 4096,
         'code-davinci-002': 8001,
         'gpt-4-1106-preview': 128000,
+        'gpt-4o': 128000,
         'gpt-4-vision-preview': 128000,
         'gpt-4': 8192,
         'gpt-4-32k': 32768,
@@ -48,17 +50,17 @@ function getMaxToken(modelName) {
     return models[modelName] || -1;
 }
 
-function splitByToken(modelName,text) {
+function splitByToken(modelName, text) {
     const maxToken = getMaxToken(modelName)
     const enc = encodingForModel(modelName)
     let currentLength = 0, currentText = ''
 
-    for(const ct of text){
+    for (const ct of text) {
         const length = enc.encode(ct).length
-        if(currentLength + length > maxToken){
+        if (currentLength + length > maxToken) {
             break
         }
-        else{
+        else {
             currentLength += length
             currentText += ct
         }
@@ -66,11 +68,25 @@ function splitByToken(modelName,text) {
     return currentText
 }
 
-function convertRelativeLinksToAbsolute({owner, repo, branch ,path, markdownContent}) {
+async function isImageUrlValid(url) {
+    try {
+        const response = await fetch(url);
+        const buffer = await response.arrayBuffer();
+        const type = await imageType(new Uint8Array(buffer));
+
+        // 检查 MIME 类型是否为图片
+        return type && type.mime.startsWith('image/');
+    } catch (error) {
+        console.error('Error fetching the URL:', error);
+        return false;
+    }
+}
+
+function convertRelativeLinksToAbsolute({ owner, repo, branch, path, markdownContent }) {
     const protocol = 'https://'
     const filePath = path.startsWith('http') ? path : (protocol + path)
 
-    const baseUrl = new URL( filePath )
+    const baseUrl = new URL(filePath)
     // 使用正则表达式匹配Markdown中的链接
     const regex = /\]\((.*?)\)/g;
     let match;
@@ -92,10 +108,10 @@ function convertRelativeLinksToAbsolute({owner, repo, branch ,path, markdownCont
     return markdownContent;
 }
 
-async function getGithubFileContent(owner, repo, branch ,path, model){
+async function getGithubFileContent(owner, repo, branch, path, model) {
     const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`;
     try {
-        const text = await fetch(url).then(res=>res.text())
+        const text = await fetch(url).then(res => res.text())
         return {
             content: splitByToken(
                 model,
@@ -112,9 +128,9 @@ async function getGithubFileContent(owner, repo, branch ,path, model){
     }
 }
 
-async function fetchUrl(url, model){
-    return read(url).then(article=>{
-        const {title, content} = article
+async function fetchUrl(url, model) {
+    return read(url).then(article => {
+        const { title, content } = article
         article.close();
 
         const $ = cheerio.load(content);
@@ -126,21 +142,21 @@ async function fetchUrl(url, model){
     })
 }
 
-async function webSearch(query){
+async function webSearch(query) {
     let subscription_key = process.env.BING_SUBSCRIPTION_KEY
     let mkt = 'en-US';
-    let params = {q: query, mkt: mkt};
-    let headers = {'Ocp-Apim-Subscription-Key': subscription_key};
+    let params = { q: query, mkt: mkt };
+    let headers = { 'Ocp-Apim-Subscription-Key': subscription_key };
 
     const queryString = Object.keys(params)
         .map(key => key + '=' + encodeURIComponent(params[key]))
         .join('&')
 
-    return fetch(`https://api.bing.microsoft.com/v7.0/search?${queryString}`,{
+    return fetch(`https://api.bing.microsoft.com/v7.0/search?${queryString}`, {
         headers
-    }).then(async res=>{
+    }).then(async res => {
         const resp = await res.json()
-        return resp.webPages.value.map(value=>{
+        return resp.webPages.value.map(value => {
             return {
                 title: value.name,
                 link: value.url,
@@ -150,27 +166,71 @@ async function webSearch(query){
     })
 }
 
-const getOpenaiInstance = async (token)=>{
+async function generateImage(prompt) {
+    const tokenHandler = await getConfigApiKey()
+    return tokenHandler.execute(async token => {
+        const openai = await getOpenaiInstance(token)
+        const response = await openai.images.generate({
+            model: "dall-e-3",
+            prompt,
+            n: 1
+        });
+        return {
+            url: response.data[0].url
+        }
+    })
+}
+
+async function getPictureUnderstand(url, prompt) {
+    const isValidImage = await isImageUrlValid(url)
+    if (!isValidImage) return 'url不是一个图片'
+    const tokenHandler = await getConfigApiKey()
+    return tokenHandler.execute(async token => {
+        const openai = await getOpenaiInstance(token)
+        const response = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [
+                {
+                    role: "user",
+                    content: [
+                        { type: "text", text: prompt },
+                        {
+                            type: "image_url",
+                            image_url: {
+                                url,
+                            },
+                        },
+                    ],
+                },
+            ],
+        });
+        return {
+            text: response.choices[0].message.content
+        }
+    })
+}
+
+const getOpenaiInstance = async (token) => {
     return new OpenAI({
         baseURL: process.env.OPENAI_BASEURL,
         apiKey: token
     })
 }
 
-const getResponseFromFC = async ({toolCalls,content,model,stream,assistantMessage})=>{
-    console.log('model',model)
+const getResponseFromFC = async ({ toolCalls, content, model, stream, assistantMessage }) => {
+    console.log('model', model)
     const messages = [
         getSystemPrompt(),
         {
-            role:'user',
+            role: 'user',
             content: content
         },
         assistantMessage
     ]
-    for(const tool of toolCalls){
+    for (const tool of toolCalls) {
         const funcName = tool.function.name
         const arg = JSON.parse(tool.function.arguments)
-        if(funcName === 'search_web'){
+        if (funcName === 'search_web') {
             messages.push({
                 tool_call_id: tool.id,
                 role: "tool",
@@ -178,7 +238,7 @@ const getResponseFromFC = async ({toolCalls,content,model,stream,assistantMessag
                 content: JSON.stringify(await webSearch(arg.query)),
             })
         }
-        if(funcName === 'fetch_url'){
+        if (funcName === 'fetch_web_page') {
             messages.push({
                 tool_call_id: tool.id,
                 role: "tool",
@@ -186,7 +246,7 @@ const getResponseFromFC = async ({toolCalls,content,model,stream,assistantMessag
                 content: JSON.stringify(await fetchUrl(arg.url, model))
             })
         }
-        if(funcName === 'get_github_file_content'){
+        if (funcName === 'get_github_file_content') {
             messages.push({
                 tool_call_id: tool.id,
                 role: "tool",
@@ -194,9 +254,26 @@ const getResponseFromFC = async ({toolCalls,content,model,stream,assistantMessag
                 content: JSON.stringify(await getGithubFileContent(arg.owner, arg.repo, arg.branch, arg.path, model))
             })
         }
+        if (funcName === 'generate_image') {
+            messages.push({
+                tool_call_id: tool.id,
+                role: "tool",
+                name: funcName,
+                content: JSON.stringify(await generateImage(arg.prompt))
+            })
+        }
+        //getPictureUnderstand
+        if (funcName === 'get_picture_understand') {
+            messages.push({
+                tool_call_id: tool.id,
+                role: "tool",
+                name: funcName,
+                content: JSON.stringify(await getPictureUnderstand(arg.url, arg.prompt))
+            })
+        }
     }
-    const tokenHandler  = await getConfigApiKey()
-    return tokenHandler.execute(async token=>{
+    const tokenHandler = await getConfigApiKey()
+    return tokenHandler.execute(async token => {
         const openai = await getOpenaiInstance(token)
         return openai.chat.completions.create({
             model,
@@ -209,7 +286,63 @@ const getResponseFromFC = async ({toolCalls,content,model,stream,assistantMessag
 const tools = [
     {
         "type": "function",
-        "function":{
+        "function": {
+            "name": "get_picture_understand",
+            "description": "一个函数，可以根据用户的诉求与提供的图片回答问题，参数有两个,url与prompt，url是图片的链接，prompt是用户的诉求",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "url": {
+                        "type": "string",
+                        "description": "图片的链接",
+                    },
+                    "prompt": {
+                        "type": "string",
+                        "description": "用户的诉求",
+                    }
+                },
+                "required": ["url","prompt"],
+            },
+            "return": {
+                "type": "object",
+                "properties": {
+                    "text": {
+                        "type": "string",
+                        "description": "对图片的解释"
+                    }
+                }
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "generate_image",
+            "description": "一个可以文生图的函数，在用户要求生成图片时调用，参数prompt是一个文本，表示对图片的描述",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "prompt": {
+                        "type": "string",
+                        "description": "一个描述图片的文本",
+                    }
+                },
+                "required": ["prompt"],
+            },
+            "return": {
+                "type": "object",
+                "properties": {
+                    "url": {
+                        "type": "string",
+                        "description": "图片的链接"
+                    }
+                }
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "get_github_file_content",
             "description": "在用户寻求某个托管在github上的文件内容时调用，参数有多个: owner、repo、branch、path",
             "parameters": {
@@ -227,33 +360,33 @@ const tools = [
                         "type": "string",
                         "description": "github分支名",
                     },
-                    "path":{
+                    "path": {
                         "type": "string",
                         "description": "文件在github中的路径",
                     }
                 },
-                "required": ["owner","repo","branch","path"],
+                "required": ["owner", "repo", "branch", "path"],
             },
             // @ts-ignore
-            "return":{
-                "type":"object",
-                "properties":{
-                    "content":{
-                        "type":"string",
-                        "description":"文件的内容"
+            "return": {
+                "type": "object",
+                "properties": {
+                    "content": {
+                        "type": "string",
+                        "description": "文件的内容"
                     }
                 }
             }
         }
     },
     {
-        "type":"function",
-        "function":{
-            "name":"fetch_url",
-            "description":"在用户寻求某个网址时请求网页的内容，参数是一个 web url",
-            "parameters":{
+        "type": "function",
+        "function": {
+            "name": "fetch_web_page",
+            "description": "在用户寻求某个网址时请求网页的内容，参数是一个 web url",
+            "parameters": {
                 "type": "object",
-                "properties":{
+                "properties": {
                     "url": {
                         "type": "string",
                         "description": "请求的网址",
@@ -262,16 +395,16 @@ const tools = [
                 "required": ["url"],
             },
             // @ts-ignore
-            "return":{
-                "type":"object",
-                "properties":{
-                    "title":{
-                        "type":"string",
-                        "description":"网页的标题"
+            "return": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "description": "网页的标题"
                     },
-                    "content":{
-                        "type":"string",
-                        "description":"网页的主要内容"
+                    "content": {
+                        "type": "string",
+                        "description": "网页的主要内容"
                     }
                 }
             }
@@ -279,7 +412,7 @@ const tools = [
     },
     {
         "type": "function",
-        "function":{
+        "function": {
             "name": "search_web",
             "description": "在用户寻求信息或者搜索结果可能有帮助的时候进行网上搜索, 参数是一个可能的搜索关键字或者句子",
             "parameters": {
@@ -293,10 +426,10 @@ const tools = [
                 "required": ["query"],
             },
             // @ts-ignore
-            "return":{
-                "type":"array",
-                "items":{
-                    "type":"object",
+            "return": {
+                "type": "array",
+                "items": {
+                    "type": "object",
                     "properties": {
                         "link": {
                             "type": "string",
@@ -306,12 +439,12 @@ const tools = [
                             "type": "string",
                             "description": "搜索结果的标题"
                         },
-                        "snippet":{
-                            "type":"string",
-                            "description":"搜索结果的摘要"
+                        "snippet": {
+                            "type": "string",
+                            "description": "搜索结果的摘要"
                         }
                     },
-                    "required": ["link","title"]
+                    "required": ["link", "title"]
                 }
             }
         }
@@ -329,7 +462,7 @@ await server.register(fastifyStatic, {
 });
 
 await server.register(cors, {
-    origin: 'http://127.0.0.1:3000'
+    origin: '*'
 });
 
 server.get('/', async (req, res) => {
@@ -337,25 +470,25 @@ server.get('/', async (req, res) => {
     res.send('ok');
 });
 
-server.get('/api/get_models', async (request, reply)=>{
-    const tokenHandler  = await getConfigApiKey()
-    await tokenHandler.execute(async token=>{
-        try{
-            const resp = await fetch(`${process.env.OPENAI_BASEURL}/models`,{
-                headers:{
+server.get('/api/get_models', async (request, reply) => {
+    const tokenHandler = await getConfigApiKey()
+    await tokenHandler.execute(async token => {
+        try {
+            const resp = await fetch(`${process.env.OPENAI_BASEURL}/models`, {
+                headers: {
                     'Authorization': `Bearer ${token}`
                 }
-            }).then(res=>res.json())
+            }).then(res => res.json())
             reply.send(resp)
             //reply.code(400).send('Auth Failed');
-        } catch (e){
+        } catch (e) {
             reply.code(500).send(e.toString());
         }
     })
 
 })
 
-const getSystemPrompt = ()=>{
+const getSystemPrompt = () => {
     const currentDateString = new Date().toLocaleDateString(
         'en-us',
         { year: 'numeric', month: 'long', day: 'numeric' },
@@ -366,15 +499,15 @@ const getSystemPrompt = ()=>{
     }
 }
 
-const formatMessages = (messages = [])=>{
-    const msg = messages.map(message=>{
-        if(message.role === 'ChatGPT'){
+const formatMessages = (messages = []) => {
+    const msg = messages.map(message => {
+        if (message.role === 'ChatGPT') {
             return {
-                role:'assistant',
+                role: 'assistant',
                 content: message.message
             }
         }
-        if(message.role === 'User'){
+        if (message.role === 'User') {
             return {
                 role: 'user',
                 content: message.message
@@ -388,7 +521,7 @@ const formatMessages = (messages = [])=>{
         ...msg
     ]
 }
-server.post('/api/chat', async (request, reply)=>{
+server.post('/api/chat', async (request, reply) => {
 
     console.log('api chat message - ', JSON.stringify(request.body));
 
@@ -435,8 +568,8 @@ server.post('/api/chat', async (request, reply)=>{
     const messages = formatMessages(conversation.messages);
 
     const model = body.model || 'gpt-3.5-turbo-0125'
-    const tokenHandler  = await getConfigApiKey()
-    await tokenHandler.execute(async token=>{
+    const tokenHandler = await getConfigApiKey()
+    await tokenHandler.execute(async token => {
         const openai = await getOpenaiInstance(token)
 
         try {
@@ -448,25 +581,25 @@ server.post('/api/chat', async (request, reply)=>{
                 tool_choice: 'auto',
             })
             let toolCalls = []
-            let resultStream, content = '', assistantMessage = {role:'assistant', content:'', tool_calls:[]}
-            if(body.stream){
+            let resultStream, content = '', assistantMessage = { role: 'assistant', content: '', tool_calls: [] }
+            if (body.stream) {
                 for await (const chunk of stream) {
-                    if(chunk.choices[0]?.finish_reason === 'tool_calls') break
+                    if (chunk.choices[0]?.finish_reason === 'tool_calls') break
 
-                    if(chunk.choices[0]?.delta?.tool_calls){
-                        for(const tool of (chunk.choices[0]?.delta?.tool_calls || [])){
-                            const {index} = tool
-                            if(toolCalls[index]){
+                    if (chunk.choices[0]?.delta?.tool_calls) {
+                        for (const tool of (chunk.choices[0]?.delta?.tool_calls || [])) {
+                            const { index } = tool
+                            if (toolCalls[index]) {
                                 toolCalls[index].function.arguments += tool.function.arguments || ''
                             }
-                            else{
+                            else {
                                 toolCalls[index] = tool
                             }
                         }
                     }
-                    else{
+                    else {
                         const ct = chunk.choices[0]?.delta?.content || ''
-                        if(ct){
+                        if (ct) {
                             content += ct
                             reply.sse({ id: '', data: JSON.stringify(ct) });
                         }
@@ -474,14 +607,14 @@ server.post('/api/chat', async (request, reply)=>{
                 }
                 assistantMessage.tool_calls = toolCalls
             }
-            else{
+            else {
                 toolCalls = stream.choices[0]?.message?.tool_calls || []
                 assistantMessage = stream.choices[0].message
 
                 content = stream.choices[0]?.message?.content || ''
             }
 
-            if(toolCalls.length){
+            if (toolCalls.length) {
                 resultStream = await getResponseFromFC({
                     toolCalls,
                     content: body.message,
@@ -489,8 +622,8 @@ server.post('/api/chat', async (request, reply)=>{
                     model,
                     stream: body.stream
                 })
-                if(body.stream){
-                    for await (const chunk of resultStream){
+                if (body.stream) {
+                    for await (const chunk of resultStream) {
                         const ct = chunk.choices[0]?.delta?.content || ''
                         content += ct
                         reply.sse({ id: '', data: JSON.stringify(ct) });
@@ -518,15 +651,15 @@ server.post('/api/chat', async (request, reply)=>{
             }
 
             if (body.stream) {
-                reply.sse({ event: 'result', id: '', data: JSON.stringify(result)});
+                reply.sse({ event: 'result', id: '', data: JSON.stringify(result) });
                 reply.sse({ id: '', data: '[DONE]' });
                 await nextTick();
                 reply.raw.end();
                 return;
             }
             reply.send(result);
-        } catch (e){
-            console.log('error',e)
+        } catch (e) {
+            console.log('error', e)
             reply.send(e)
         }
     })
